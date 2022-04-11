@@ -31,4 +31,4 @@ include_directories(${PROJECT_SOURCE_DIR})
 include_directories(${PROJECT_SOURCE_DIR}/ast)
 include_directories(${PROJECT_SOURCE_DIR}/gen)
 
-add_executable(compiler ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS} main.cpp)
+add_executable(compiler ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS} main.cpp ast/ast.h)
