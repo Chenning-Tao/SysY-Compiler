@@ -4,12 +4,9 @@
 
 #include "ast.hpp"
 
-void CompUnitAST::print(int indent) const {
-    cout << "CompUnit {" << endl;
-    ++indent;
-    print_indent(indent);
-    func_def->print(indent);
-    cout << "}" << endl;
+void CompUnit_FuncDef::print(int indent) const {
+    CompUnit::print(indent);
+    func_def->print(++indent);
 }
 
 void FuncDefAST::print(int indent) const {
@@ -38,4 +35,15 @@ void BlockAST::print(int indent) const {
 
 void StmtAST::print(int indent) const {
     cout << re << " " << number << endl;
+}
+
+void CompUnit::print(int indent) const {
+    cout << "CompUnit:" << endl;
+    ++indent;
+    print_indent(indent);
+}
+
+void CompUnit_Decl::print(int indent) const {
+    CompUnit::print(indent);
+    decl->print(++indent);
 }

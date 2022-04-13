@@ -1,7 +1,7 @@
 %code requires {
 	#include <memory>
 	#include <string>
-	#include "ast.h"
+	#include "ast.hpp"
 	using namespace std;
 }
 
@@ -10,7 +10,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include "ast.h"
+#include "ast.hpp"
 
 
 using namespace std;
@@ -36,18 +36,43 @@ void yyerror(unique_ptr<BaseAST> &ast, const char *s);
 %token <int_val> INT_CONST
 
 // none terminal type
-%type <ast_val> FuncDef FuncType Block Stmt
+%type <ast_val> FuncDef FuncType Block Stmt Decl CompUnit
 %type <int_val> Number
 
 %%
 
 CompUnit
 	: FuncDef {
-		auto comp_unit = make_unique<CompUnitAST>();
+		auto comp_unit = make_unique<CompUnit_FuncDef>();
 		comp_unit->func_def = unique_ptr<BaseAST>($1);
 		ast = move(comp_unit);
 	}
+	| Decl {
+		auto comp_unit = make_unique<CompUnit_Decl>();
+		comp_unit->decl = unique_ptr<BaseAST>($1);
+		ast = move(comp_unit);
+	}
+	| CompUnit Decl {
+		auto comp_unit = make_unique<CompUnit_Decl>();
+		comp_unit->decl = unique_ptr<BaseAST>($2);
+		comp_unit->next = unique_ptr<BaseAST>($1);
+		ast = move(comp_unit);
+	}
+	| CompUnit FuncDef {
+		auto comp_unit = make_unique<CompUnit_FuncDef>();
+		comp_unit->func_def = unique_ptr<BaseAST>($2);
+		comp_unit->next = unique_ptr<BaseAST>($1);
+		ast = move(comp_unit);
+	}
 	;
+
+Decl
+	: INT {
+		auto ast = new FuncTypeAST();
+		ast->type = *unique_ptr<string>(new string("int"));
+		$$ = ast;
+	}
+	; 
 
 FuncDef
 	: FuncType IDENT '(' ')' Block {

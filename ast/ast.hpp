@@ -33,13 +33,26 @@ public:
     virtual void print(int indent) const = 0;
 };
 
-class CompUnitAST : public BaseAST {
+class CompUnit : public BaseAST {
+public:
+    unique_ptr<BaseAST> next;
+
+    void print(int indent) const override;
+};
+
+class CompUnit_Decl : public CompUnit {
+public:
+    unique_ptr<BaseAST> decl;
+
+    void print(int indent) const override;
+};
+
+class CompUnit_FuncDef : public CompUnit {
 public:
     unique_ptr<BaseAST> func_def;
 
     void print(int indent) const override;
 };
-
 
 class FuncDefAST : public BaseAST {
 public:
