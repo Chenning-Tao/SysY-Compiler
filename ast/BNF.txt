@@ -1,3 +1,7 @@
+# [...] --> repeat 0 or 1
+# {...} --> repeat 0 to many
+# terminal symbol: using " " or using capital
+
 CompUnit      ::= [CompUnit] (Decl | FuncDef);
 
 Decl          ::= ConstDecl | VarDecl;
@@ -17,7 +21,7 @@ FuncFParam    ::= BType IDENT ["[" "]" {"[" ConstExp "]"}];
 
 Block         ::= "{" {BlockItem} "}";
 BlockItem     ::= Decl | Stmt;
-Stmt          ::= LVal "=" Exp ";"
+Stmt          ::=   LVal "=" Exp ";"
                 | [Exp] ";"
                 | Block
                 | "if" "(" Exp ")" Stmt ["else" Stmt]
