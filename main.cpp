@@ -3,7 +3,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include "ast/ast.h"
+#include "ast/ast.hpp"
 
 using namespace std;
 
@@ -11,16 +11,13 @@ extern FILE *yyin;
 extern int yyparse(unique_ptr<BaseAST> &ast);
 
 int main(int argc, const char *argv[]) {
-//    assert(argc == 5);
-//    auto mode = argv[1];
     auto input = argv[1];
-//    auto output = argv[4];
 
     // open file for lexer
     yyin = fopen(input, "r");
     assert(yyin);
 
-    // using parser function
+    // using parser func
     unique_ptr<BaseAST> ast;
     auto ret = yyparse(ast);
     assert(!ret);
