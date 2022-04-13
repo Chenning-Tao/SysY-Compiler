@@ -1,9 +1,10 @@
-.vscode
 .DS_Store
 
 # build file
 build
 debug
 cmake-build-debug
+
+# editor
 .idea
 .vscode

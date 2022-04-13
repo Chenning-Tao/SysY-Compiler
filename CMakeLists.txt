@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.19)
 project(compiler)
 
 set (CMAKE_CXX_STANDARD 17)
-set (CMAKE_CXX_FLAGS '-g')
+#set (CMAKE_CXX_FLAGS '-g')
 
 # find required package
 find_package(FLEX REQUIRED)
@@ -31,4 +31,8 @@ include_directories(${PROJECT_SOURCE_DIR})
 include_directories(${PROJECT_SOURCE_DIR}/ast)
 include_directories(${PROJECT_SOURCE_DIR}/gen)
 
-add_executable(compiler ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS} main.cpp ast/ast.h)
+add_executable(compiler ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS} main.cpp gen/backend.cpp ast/ast.cpp)
+
+llvm_map_components_to_libnames(llvm_libs analysis core executionengine instcombine object orcjit runtimedyld scalaropts support native irreader mcjit)
+
+target_link_libraries(compiler ${llvm_libs})
