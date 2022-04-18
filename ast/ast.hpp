@@ -7,80 +7,76 @@
 #include <iostream>
 #include <memory>
 #include <map>
-#include <llvm-14/llvm/IR/Value.h>
-#include <llvm-14/llvm/ADT/APFloat.h>
-#include <llvm-14/llvm/ADT/STLExtras.h>
-#include <llvm-14/llvm/IR/BasicBlock.h>
-#include <llvm-14/llvm/IR/Constants.h>
-#include <llvm-14/llvm/IR/DerivedTypes.h>
-#include <llvm-14/llvm/IR/Function.h>
-#include <llvm-14/llvm/IR/IRBuilder.h>
-#include <llvm-14/llvm/IR/LLVMContext.h>
-#include <llvm-14/llvm/IR/Module.h>
-#include <llvm-14/llvm/IR/Type.h>
-#include <llvm-14/llvm/IR/Verifier.h>
+#include <vector>
 using namespace std;
+
+enum type {Int, Float, Void};
 
 static void print_indent(int indent) {
     for(int i = 0; i < indent; ++i) cout << "\t";
+}
+
+static void print_type(type func_type) {
+    switch (func_type) {
+        case Int:
+            cout << "'int'";
+            break;
+        case Float:
+            cout << "'float'";
+            break;
+        case Void:
+            cout << "'void'";
+            break;
+    }
 }
 
 // all AST base class
 class BaseAST {
 private:
 public:
+    string Name;
     virtual ~BaseAST() = default;
     virtual void print(int indent) const = 0;
 };
 
-class CompUnit : public BaseAST {
+class Func : public BaseAST {
 public:
-    unique_ptr<BaseAST> next;
+    string Func_name;
+    type Func_type;
+    unique_ptr<BaseAST> Param;
+    unique_ptr<BaseAST> Block;
 
     void print(int indent) const override;
 };
 
-class CompUnit_Decl : public CompUnit {
+class Decl : public BaseAST {
 public:
-    unique_ptr<BaseAST> decl;
+    bool Const;
+    type Decl_type;
+    string Var_name;
+    unique_ptr<BaseAST> Exp;
 
     void print(int indent) const override;
 };
 
-class CompUnit_FuncDef : public CompUnit {
+class Stat : public BaseAST {
 public:
-    unique_ptr<BaseAST> func_def;
+    void print(int indent) const override;
+};
+
+class Exp : public BaseAST {
+public:
+    unique_ptr<BaseAST> Left_exp;
+    string Operator;
+    unique_ptr<BaseAST> Right_exp;
 
     void print(int indent) const override;
 };
 
-class FuncDefAST : public BaseAST {
+class FinalExp : public BaseAST {
 public:
-    unique_ptr<BaseAST> func_type;
-    string ident;
-    unique_ptr<BaseAST> block;
-
-    void print(int indent) const override;
-};
-
-class FuncTypeAST : public BaseAST {
-public:
-    string type;
-
-    void print(int indent) const override;
-};
-
-class BlockAST : public BaseAST {
-public:
-    unique_ptr<BaseAST> block_item;
-
-    void print(int indent) const override;
-};
-
-class StmtAST : public BaseAST {
-public:
-    string re;
-    int number;
+    type Exp_type;
+    float number;
 
     void print(int indent) const override;
 };

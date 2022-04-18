@@ -4,46 +4,28 @@
 
 #include "ast.hpp"
 
-void CompUnit_FuncDef::print(int indent) const {
-    CompUnit::print(indent);
-    func_def->print(++indent);
+void Decl::print(int indent) const {
+    cout << Name << "\t" << Var_name << " ";
+    print_type(Decl_type);
 }
 
-void FuncDefAST::print(int indent) const {
-    cout << "FuncDef { " << endl;
+void Stat::print(int indent) const {
+
+}
+
+void Exp::print(int indent) const {
+
+}
+
+void FinalExp::print(int indent) const {
+
+}
+
+void Func::print(int indent) const {
+    cout << Name << "\t" << Func_name << " ";
+    print_type(Func_type);
+    cout << endl;
     ++indent;
     print_indent(indent);
-    func_type->print(indent);
-    cout << ", " << ident << ", " ;
-    block->print(indent);
-    print_indent(--indent);
-    cout << " }" << endl;
-}
-
-void FuncTypeAST::print(int indent) const {
-    cout << "FuncType :" << type;
-}
-
-void BlockAST::print(int indent) const {
-    cout << "Block {" << endl;
-    ++indent;
-    print_indent(indent);
-    block_item->print(indent);
-    print_indent(--indent);
-    cout << "}" << endl;
-}
-
-void StmtAST::print(int indent) const {
-    cout << re << " " << number << endl;
-}
-
-void CompUnit::print(int indent) const {
-    cout << "CompUnit:" << endl;
-    ++indent;
-    print_indent(indent);
-}
-
-void CompUnit_Decl::print(int indent) const {
-    CompUnit::print(indent);
-    decl->print(++indent);
+    Block->print(indent);
 }

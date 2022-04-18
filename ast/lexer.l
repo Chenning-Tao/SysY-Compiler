@@ -38,12 +38,12 @@ Hexadecimal   0[xX][0-9a-fA-F]+
 "break"         { return BREAK; }
 "continue"      { return CONTINUE; }
 
-{Identifier}    { yylval.str_val = new string(yytext); cout << yytext << endl; return IDENT; }
+{Identifier}    { yylval.str_val = new string(yytext); return IDENT; }
 
 {Decimal}       { yylval.int_val = strtol(yytext, nullptr, 0); return INT_CONST; }
 {Octal}         { yylval.int_val = strtol(yytext, nullptr, 0); return INT_CONST; }
 {Hexadecimal}   { yylval.int_val = strtol(yytext, nullptr, 0); return INT_CONST; }
 
-.               { cout << yytext[0] << endl; return yytext[0]; }
+.               { return yytext[0]; }
 
 %%

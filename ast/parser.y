@@ -10,6 +10,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <vector>
 #include "ast.hpp"
 
 
@@ -38,39 +39,41 @@ extern int yylineno;
 %token <float_val> FLOAT_CONST
 
 // none terminal type
-%type <ast_val> FuncDef FuncType Block Stmt Decl CompUnit ConstDecl VarDecl BType ConstDef ConstExp
+%type <ast_val> FuncDef FuncType Block Stmt Decl CompUnit ConstDecl VarDecl BType ConstDef ConstExp BlockItem_Wrap BlockItem VarDef
 %type <int_val> Number
 
 %%
 
 CompUnit
 	: FuncDef {
-		auto comp_unit = make_unique<CompUnit_FuncDef>();
-		comp_unit->func_def = unique_ptr<BaseAST>($1);
-		ast = move(comp_unit);
+		auto func = make_unique<Func>();
+		func->Name = "FuncDef";
+		func->Func_name = reinterpret_cast<Func*>$1->Func_name;
+		func->Func_type = reinterpret_cast<Func*>$1->Func_type;
+		func->Param = move(reinterpret_cast<Func*>$1->Param);
+		func->Block = move(reinterpret_cast<Func*>$1->Block);
+		ast = move(func);
 	}
 	| Decl {
-		auto comp_unit = make_unique<CompUnit_Decl>();
-		comp_unit->decl = unique_ptr<BaseAST>($1);
-		ast = move(comp_unit);
+		// auto comp_unit = make_unique<CompUnit_Decl>();
+		// comp_unit->decl = unique_ptr<BaseAST>($1);
+		// ast = move(comp_unit);
 	}
 	| CompUnit Decl {
-		auto comp_unit = make_unique<CompUnit_Decl>();
-//		comp_unit->decl = unique_ptr<BaseAST>($2);
-//		comp_unit->next = unique_ptr<BaseAST>($1);
-		ast = move(comp_unit);
+		// auto comp_unit = make_unique<CompUnit_Decl>();
+		// ast = move(comp_unit);
 	}
 	| CompUnit FuncDef {
-		auto comp_unit = make_unique<CompUnit_FuncDef>();
-//		comp_unit->func_def = unique_ptr<BaseAST>($2);
-//		comp_unit->next = unique_ptr<BaseAST>($1);
-		ast = move(comp_unit);
+		// auto comp_unit = make_unique<CompUnit_FuncDef>();
+		// ast = move(comp_unit);
 	} 
 	;
 
 Decl
 	: ConstDecl { } 
-	| VarDecl { }
+	| VarDecl { 
+		$$ = $1;
+	}
 	; 
 
 ConstDecl
@@ -78,7 +81,10 @@ ConstDecl
 	;
 
 BType
-	: INT { }
+	: INT { 
+		auto ast = new Decl();
+		ast->Decl_type = Int;
+	}
 	| FLOAT { }
 	;
 
@@ -104,11 +110,21 @@ ConstInitVal_Wrap
 	;
 
 VarDecl
-	: BType VarDef ';' { }
+	: BType VarDef ';' {
+		auto ast = new Decl();
+		ast->Name = "VarDecl";
+		ast->Decl_type = reinterpret_cast<Decl*>$1->Decl_type;
+		ast->Var_name = reinterpret_cast<Decl*>$2->Var_name;
+		$$ = ast;
+	}
 	;
 
 VarDef
-	: IDENT { }
+	: IDENT { 
+		auto ast = new Decl();
+		ast->Var_name = *unique_ptr<string>($1);
+		$$ = ast;
+	}
 	| IDENT '=' InitVal { }
 	| IDENT ConstExp_Wrap { }
 	| IDENT ConstExp_Wrap '=' InitVal { }
@@ -128,9 +144,11 @@ InitVal_Wrap
 
 FuncDef
 	: FuncType '(' ')' Block {
-		auto ast = new FuncDefAST();
-		ast->func_type = unique_ptr<BaseAST>($1);
-		ast->block = unique_ptr<BaseAST>($4);
+		auto ast = new Func();
+		ast->Func_name = reinterpret_cast<Func*>$1->Func_name;
+		ast->Func_type = reinterpret_cast<Func*>$1->Func_type;
+		ast->Param = nullptr;
+		ast->Block = move(reinterpret_cast<Func*>$4->Block);
 		$$ = ast;
 	}
 	| FuncType '(' FuncFParams ')' Block { }
@@ -138,19 +156,20 @@ FuncDef
 
 FuncType
 	: INT IDENT {
-		auto ast = new FuncTypeAST();
-		ast->type = *unique_ptr<string>(new string("int"));
+		auto ast = new Func();
+		ast->Func_name = *unique_ptr<string>($2);
+		ast->Func_type = Int;
 		$$ = ast;
 	}
 	| FLOAT IDENT {
-		auto ast = new FuncTypeAST();
-		ast->type = *unique_ptr<string>(new string("float"));
-		$$ = ast;
+		// auto ast = new FuncTypeAST();
+		// ast->type = *unique_ptr<string>(new string("float"));
+		// $$ = ast;
 	}
 	| VOID IDENT {
-		auto ast = new FuncTypeAST();
-		ast->type = *unique_ptr<string>(new string("void"));
-		$$ = ast;
+		// auto ast = new FuncTypeAST();
+		// ast->type = *unique_ptr<string>(new string("void"));
+		// $$ = ast;
 	}
 	;
 
@@ -177,21 +196,30 @@ Exp_Wrap
 
 Block
 	: '{' BlockItem_Wrap '}' {
-		// TODO update
-		auto ast = new BlockAST();
-//		ast->block_item = unique_ptr<BaseAST>($2);
+		auto ast = new Func();
+		ast->Block = move(reinterpret_cast<Func*>$2->Block);
 		$$ = ast;
 	}
 	;
 
 BlockItem_Wrap
-	: BlockItem { }
+	: BlockItem { 
+		auto ast = new Func();
+		ast->Block = unique_ptr<BaseAST>($1);
+		$$ = ast;
+		// auto t1 = make_unique<BaseAST>($1);
+		// ast->Block_list.push_back(move(t1));
+	}
 	| BlockItem BlockItem_Wrap { }
 	;
 
 BlockItem
-	: Decl { }
-	| Stmt { }
+	: Decl { 
+		$$ = $1;
+	}
+	| Stmt {
+		// auto ast = new Stat();
+	}
 	;
 
 Stmt
