@@ -43,8 +43,8 @@ class Func : public BaseAST {
 public:
     string Func_name;
     type Func_type;
-    unique_ptr<BaseAST> Param;
-    unique_ptr<BaseAST> Block;
+    vector<unique_ptr<BaseAST>> Params;
+    vector<unique_ptr<BaseAST>> Blocks;
 
     void print(int indent) const override;
 };

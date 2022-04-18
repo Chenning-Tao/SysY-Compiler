@@ -26,6 +26,10 @@ void Func::print(int indent) const {
     print_type(Func_type);
     cout << endl;
     ++indent;
-    print_indent(indent);
-    Block->print(indent);
+    for(const auto & Block : Blocks){
+        print_indent(indent);
+        Block->print(indent);
+        cout << endl;
+    }
+
 }

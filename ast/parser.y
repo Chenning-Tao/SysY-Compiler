@@ -50,8 +50,8 @@ CompUnit
 		func->Name = "FuncDef";
 		func->Func_name = reinterpret_cast<Func*>$1->Func_name;
 		func->Func_type = reinterpret_cast<Func*>$1->Func_type;
-		func->Param = move(reinterpret_cast<Func*>$1->Param);
-		func->Block = move(reinterpret_cast<Func*>$1->Block);
+		func->Params = move(reinterpret_cast<Func*>$1->Params);
+		func->Blocks = move(reinterpret_cast<Func*>$1->Blocks);
 		ast = move(func);
 	}
 	| Decl {
@@ -147,8 +147,8 @@ FuncDef
 		auto ast = new Func();
 		ast->Func_name = reinterpret_cast<Func*>$1->Func_name;
 		ast->Func_type = reinterpret_cast<Func*>$1->Func_type;
-		ast->Param = nullptr;
-		ast->Block = move(reinterpret_cast<Func*>$4->Block);
+		ast->Params = vector<unique_ptr<BaseAST>>();
+		ast->Blocks = move(reinterpret_cast<Func*>$4->Blocks);
 		$$ = ast;
 	}
 	| FuncType '(' FuncFParams ')' Block { }
@@ -196,21 +196,21 @@ Exp_Wrap
 
 Block
 	: '{' BlockItem_Wrap '}' {
-		auto ast = new Func();
-		ast->Block = move(reinterpret_cast<Func*>$2->Block);
-		$$ = ast;
+		$$ = $2;
 	}
 	;
 
 BlockItem_Wrap
 	: BlockItem { 
 		auto ast = new Func();
-		ast->Block = unique_ptr<BaseAST>($1);
+		ast->Blocks.push_back(unique_ptr<BaseAST>($1));
 		$$ = ast;
-		// auto t1 = make_unique<BaseAST>($1);
-		// ast->Block_list.push_back(move(t1));
 	}
-	| BlockItem BlockItem_Wrap { }
+	| BlockItem BlockItem_Wrap { 
+		auto ast = reinterpret_cast<Func*>$2;
+		ast->Blocks.insert(ast->Blocks.begin(), unique_ptr<BaseAST>($1));
+		$$ = move(ast);
+	}
 	;
 
 BlockItem
