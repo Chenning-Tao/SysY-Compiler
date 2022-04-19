@@ -3,7 +3,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include "ast/ast.hpp"
+#include "frontend//ast.hpp"
 
 using namespace std;
 

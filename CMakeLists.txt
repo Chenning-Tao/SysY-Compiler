@@ -13,8 +13,8 @@ message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
 # lexer/parser input filename
-file(GLOB_RECURSE L_SOURCES "ast/*.l")
-file(GLOB_RECURSE Y_SOURCES "ast/*.y")
+file(GLOB_RECURSE L_SOURCES "frontend/*.l")
+file(GLOB_RECURSE Y_SOURCES "frontend/*.y")
 
 # lexer/parser output filename
 string(REGEX REPLACE ".*/(.*)\\.l" "${CMAKE_CURRENT_BINARY_DIR}/\\1.lex.cpp" L_OUTPUTS "${L_SOURCES}")
@@ -28,10 +28,10 @@ add_flex_bison_dependency(Lexer Parser)
 # project include dir
 include_directories(${LLVM_INCLUDE_DIRS})
 include_directories(${PROJECT_SOURCE_DIR})
-include_directories(${PROJECT_SOURCE_DIR}/ast)
+include_directories(${PROJECT_SOURCE_DIR}/frontend)
 include_directories(${PROJECT_SOURCE_DIR}/gen)
 
-add_executable(compiler ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS} main.cpp gen/backend.cpp ast/ast.cpp)
+add_executable(compiler ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS} main.cpp gen/backend.cpp frontend/ast.cpp)
 
 llvm_map_components_to_libnames(llvm_libs analysis core executionengine instcombine object orcjit runtimedyld scalaropts support native irreader mcjit)
 

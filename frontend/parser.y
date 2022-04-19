@@ -84,8 +84,13 @@ BType
 	: INT { 
 		auto ast = new Decl();
 		ast->Decl_type = Int;
+		$$ = ast;
 	}
-	| FLOAT { }
+	| FLOAT { 
+		auto ast = new Decl();
+		ast->Decl_type = Float;
+		$$ = ast;
+	}
 	;
 
 ConstDef
@@ -234,10 +239,10 @@ Stmt
 	| RETURN Exp ';' { }
 	| RETURN ';' { }
 	/* | RETURN Number ';' {
-		auto ast = new StmtAST();
-		ast->re = *unique_ptr<string>(new string("return"));
-		ast->number = $2;
-		$$ = ast;
+		auto frontend = new StmtAST();
+		frontend->re = *unique_ptr<string>(new string("return"));
+		frontend->number = $2;
+		$$ = frontend;
 	} */
 	;
 
