@@ -29,9 +29,9 @@ add_flex_bison_dependency(Lexer Parser)
 include_directories(${LLVM_INCLUDE_DIRS})
 include_directories(${PROJECT_SOURCE_DIR})
 include_directories(${PROJECT_SOURCE_DIR}/frontend)
-include_directories(${PROJECT_SOURCE_DIR}/gen)
+include_directories(${PROJECT_SOURCE_DIR}/backend)
 
-add_executable(compiler ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS} main.cpp gen/backend.cpp frontend/ast.cpp)
+add_executable(compiler ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS} main.cpp frontend/ast.cpp backend/gen.cpp backend/gen.hpp)
 
 llvm_map_components_to_libnames(llvm_libs analysis core executionengine instcombine object orcjit runtimedyld scalaropts support native irreader mcjit)
 
