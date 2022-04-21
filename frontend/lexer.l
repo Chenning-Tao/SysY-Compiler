@@ -21,6 +21,7 @@ Identifier    [a-zA-Z_][a-zA-Z0-9_]*
 Decimal       [1-9][0-9]*
 Octal         0[0-7]*
 Hexadecimal   0[xX][0-9a-fA-F]+
+Float         [0-9]+\.[0-9]*
 
 %%
 
@@ -43,6 +44,7 @@ Hexadecimal   0[xX][0-9a-fA-F]+
 {Decimal}       { yylval.int_val = strtol(yytext, nullptr, 0); return INT_CONST; }
 {Octal}         { yylval.int_val = strtol(yytext, nullptr, 0); return INT_CONST; }
 {Hexadecimal}   { yylval.int_val = strtol(yytext, nullptr, 0); return INT_CONST; }
+{Float}         { yylval.float_val = strtod(yytext, nullptr); return FLOAT_CONST; }
 
 .               { return yytext[0]; }
 

@@ -40,18 +40,15 @@ extern int yylineno;
 
 // none terminal type
 %type <ast_val> FuncDef FuncType Block Stmt Decl CompUnit ConstDecl VarDecl BType ConstDef ConstExp BlockItem_Wrap BlockItem VarDef
-%type <int_val> Number
+%type <float_val> Number
 
 %%
 
 CompUnit
 	: FuncDef {
-		auto func = make_unique<Func>();
-		func->Name = "FuncDef";
-		func->Func_name = reinterpret_cast<Func*>$1->Func_name;
-		func->Func_type = reinterpret_cast<Func*>$1->Func_type;
-		func->Params = move(reinterpret_cast<Func*>$1->Params);
-		func->Blocks = move(reinterpret_cast<Func*>$1->Blocks);
+		auto func = make_unique<CompUnit>();
+		$1->Name = "FuncDef";
+		func->CompUnits.push_back(unique_ptr<BaseAST>($1));
 		ast = move(func);
 	}
 	| Decl {
@@ -265,6 +262,7 @@ PrimaryExp
 	| Number { }
 	;
 
+// TODO: change the type to FinalExp
 Number
 	: INT_CONST { $$ = $1; }
 	| FLOAT_CONST { $$ = $1; }
