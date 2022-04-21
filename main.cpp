@@ -26,10 +26,7 @@ int main(int argc, const char *argv[]) {
 
     // generate LLVM IR
     gen program_gen("test");
-    unique_ptr<CompUnit> program_ast(reinterpret_cast<CompUnit*>(ast.get()));
-    ast.release();
-//    unique_ptr<int> a;
-//    unique_ptr<CompUnit> program_ast = dynamic_unique_cast<CompUnit>(move(ast));
+    unique_ptr<CompUnit> program_ast(reinterpret_cast<CompUnit*>(ast.release()));
     program_gen.ProgramGen(program_ast);
 
     return 0;

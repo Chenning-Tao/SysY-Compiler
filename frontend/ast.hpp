@@ -39,6 +39,7 @@ public:
     virtual void print(int indent) const = 0;
 };
 
+// class for function
 class Func : public BaseAST {
 public:
     string Func_name;
@@ -49,6 +50,7 @@ public:
     void print(int indent) const override;
 };
 
+// class for declaration
 class Decl : public BaseAST {
 public:
     bool Const;
@@ -59,11 +61,14 @@ public:
     void print(int indent) const override;
 };
 
+// class for statement(e.g. for, if)
+// TODO: add unit
 class Stat : public BaseAST {
 public:
     void print(int indent) const override;
 };
 
+// class for expression(e.g. 3+4)
 class Exp : public BaseAST {
 public:
     unique_ptr<BaseAST> Left_exp;
@@ -73,10 +78,18 @@ public:
     void print(int indent) const override;
 };
 
+// class for number(e.g. 2, 3.4)
 class FinalExp : public BaseAST {
 public:
     type Exp_type;
     float number;
+
+    void print(int indent) const override;
+};
+
+class CompUnit : public BaseAST {
+public:
+    vector<unique_ptr<BaseAST>> CompUnits;
 
     void print(int indent) const override;
 };

@@ -33,3 +33,10 @@ void Func::print(int indent) const {
     }
 
 }
+
+void CompUnit::print(int indent) const {
+    for (const auto & Unit : CompUnits) {
+        Unit->print(indent);
+        cout << endl;
+    }
+}
