@@ -35,6 +35,7 @@ private:
     std::unique_ptr<Module> GenModule;
     std::map<std::string, Value *> NamedValues;
     Type * GetFuncType(type FuncType);
+    void FuncGen(unique_ptr<BaseAST> &Unit);
 public:
     explicit gen(const string& name);
     void ProgramGen(unique_ptr<CompUnit> &program);
