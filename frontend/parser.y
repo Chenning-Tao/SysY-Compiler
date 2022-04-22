@@ -39,8 +39,7 @@ extern int yylineno;
 %token <float_val> FLOAT_CONST
 
 // none terminal type
-%type <ast_val> FuncDef FuncType Block Stmt Decl CompUnit ConstDecl VarDecl BType ConstDef ConstExp BlockItem_Wrap BlockItem VarDef
-%type <float_val> Number
+%type <ast_val> AddExp MulExp PrimaryExp UnaryExp Exp FuncDef FuncType Block Stmt Decl CompUnit ConstDecl VarDecl BType ConstDef ConstExp BlockItem_Wrap BlockItem VarDef Number InitVal
 
 %%
 
@@ -115,8 +114,10 @@ VarDecl
 	: BType VarDef ';' {
 		auto ast = new Decl();
 		ast->Name = "VarDecl";
+		ast->Const = false;
 		ast->Decl_type = reinterpret_cast<Decl*>$1->Decl_type;
 		ast->Var_name = reinterpret_cast<Decl*>$2->Var_name;
+		ast->Exp = move(reinterpret_cast<Decl*>$2->Exp);
 		$$ = ast;
 	}
 	;
@@ -125,15 +126,27 @@ VarDef
 	: IDENT { 
 		auto ast = new Decl();
 		ast->Var_name = *unique_ptr<string>($1);
+		ast->Exp = nullptr;
 		$$ = ast;
 	}
-	| IDENT '=' InitVal { }
+	| IDENT '=' InitVal { 
+		auto ast = new Decl();
+		ast->Var_name = *unique_ptr<string>($1);
+		ast->Exp = unique_ptr<BaseAST>($3);
+		$$ = ast;
+	}
 	| IDENT ConstExp_Wrap { }
 	| IDENT ConstExp_Wrap '=' InitVal { }
 	;
 
 InitVal
-	: Exp { }
+	: Exp { 
+		auto ast = new Exp();
+		ast->Name = "InitVal";
+		ast->Left_exp = unique_ptr<BaseAST>($1);
+		ast->Operator = "";
+		$$ = ast;
+	}
 	| '{''}' { }
 	| '{' InitVal '}' { }
 	| '{' InitVal InitVal_Wrap '}' { }
@@ -244,7 +257,9 @@ Stmt
 	;
 
 Exp
-	: AddExp { }
+	: AddExp { 
+		$$ = $1;
+	}
 	;
 
 Cond 
@@ -259,17 +274,32 @@ LVal
 PrimaryExp
 	: '(' Exp ')' { }
 	| LVal { }
-	| Number { }
+	| Number { 
+		$$ = $1;
+	}
 	;
 
-// TODO: change the type to FinalExp
 Number
-	: INT_CONST { $$ = $1; }
-	| FLOAT_CONST { $$ = $1; }
+	: INT_CONST { 
+		auto ast = new FinalExp();
+		ast->Name = "IntConst";
+		ast->Exp_type = Int;
+		ast->Number = $1;
+		$$ = ast;
+	}
+	| FLOAT_CONST { 
+		auto ast = new FinalExp();
+		ast->Name = "FloatConst";
+		ast->Exp_type = Float;
+		ast->Number = $1;
+		$$ = ast; 
+	}
 	;
 
 UnaryExp
-	: PrimaryExp { }
+	: PrimaryExp { 
+		$$ = $1;
+	}
 	| IDENT '(' ')' { }
 	| IDENT '(' FuncRParams ')' { }
 	| UnaryOp UnaryExp
@@ -291,14 +321,18 @@ FuncRParams_Wrap
 	| ',' Exp FuncRParams_Wrap { }
 
 MulExp
-	: UnaryExp { }
+	: UnaryExp { 
+		$$ = $1;
+	}
 	| MulExp '*' UnaryExp { }
 	| MulExp '/' UnaryExp { }
 	| MulExp '%' UnaryExp { }
 	;
 
 AddExp
-	: MulExp { }
+	: MulExp { 
+		$$ = $1;
+	}
 	| AddExp '+' MulExp { }
 	| AddExp '-' MulExp { }
 	;

@@ -82,7 +82,7 @@ public:
 class FinalExp : public BaseAST {
 public:
     type Exp_type;
-    float number;
+    float Number;
 
     void print(int indent) const override;
 };
