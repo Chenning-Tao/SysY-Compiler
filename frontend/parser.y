@@ -45,23 +45,30 @@ extern int yylineno;
 
 CompUnit
 	: FuncDef {
-		auto func = make_unique<CompUnit>();
+		auto func = new CompUnit();
+		func->Name = "CompUnits";
 		$1->Name = "FuncDef";
 		func->CompUnits.push_back(unique_ptr<BaseAST>($1));
-		ast = move(func);
+		ast = unique_ptr<CompUnit>(func);
+		$$ = func;
 	}
 	| Decl {
-		// auto comp_unit = make_unique<CompUnit_Decl>();
-		// comp_unit->decl = unique_ptr<BaseAST>($1);
-		// ast = move(comp_unit);
+		// auto decl = make_unique<CompUnit>();
+		// $1->Name = "Decl";
+		// decl->CompUnits.push_back(unique_ptr<BaseAST>($1));
+		// ast = move(decl);
 	}
 	| CompUnit Decl {
-		// auto comp_unit = make_unique<CompUnit_Decl>();
-		// ast = move(comp_unit);
+		
 	}
 	| CompUnit FuncDef {
-		// auto comp_unit = make_unique<CompUnit_FuncDef>();
-		// ast = move(comp_unit);
+		auto comp_unit = new CompUnit();
+		comp_unit->Name = "CompUnits";
+		$2->Name = "FuncDef";
+		comp_unit->CompUnits = move(reinterpret_cast<CompUnit*>$1->CompUnits);
+		comp_unit->CompUnits.push_back(unique_ptr<BaseAST>($2));
+		ast = unique_ptr<CompUnit>(comp_unit);
+		$$ = comp_unit;
 	} 
 	;
 
@@ -177,14 +184,16 @@ FuncType
 		$$ = ast;
 	}
 	| FLOAT IDENT {
-		// auto ast = new FuncTypeAST();
-		// ast->type = *unique_ptr<string>(new string("float"));
-		// $$ = ast;
+		auto ast = new Func();
+		ast->Func_name = *unique_ptr<string>($2);
+		ast->Func_type = Float;
+		$$ = ast;
 	}
 	| VOID IDENT {
-		// auto ast = new FuncTypeAST();
-		// ast->type = *unique_ptr<string>(new string("void"));
-		// $$ = ast;
+		auto ast = new Func();
+		ast->Func_name = *unique_ptr<string>($2);
+		ast->Func_type = Void;
+		$$ = ast;
 	}
 	;
 

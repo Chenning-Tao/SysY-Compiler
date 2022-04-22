@@ -42,7 +42,7 @@ void gen::FuncGen(unique_ptr<BaseAST> &Unit) {
     GenBuilder->SetInsertPoint(BB);
 
     // return val
-    GenBuilder->CreateRet(re);
+    GenBuilder->CreateRetVoid();
 }
 
 gen::gen(const string& name) {
