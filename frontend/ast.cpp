@@ -30,6 +30,16 @@ void Stmt::print(int indent) const {
                 cout << endl;
             }
             break;
+        case While:
+            break;
+        case Break:
+            break;
+        case Continue:
+            break;
+        case Return:
+            break;
+        case Expression:
+            break;
     }
 }
 
@@ -66,4 +76,8 @@ void CompUnit::print(int indent) const {
         Unit->print(indent);
         cout << endl;
     }
+}
+
+void Variable::print(int indent) const {
+
 }

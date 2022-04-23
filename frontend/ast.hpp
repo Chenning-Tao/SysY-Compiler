@@ -12,7 +12,7 @@ using namespace std;
 
 enum type {Int, Float, Void};
 enum stmt {If, While, Break, Continue, Return, Expression};
-enum ast {FUNC, DECL, EXP, FINALEXP, STMT, COMPUNIT };
+enum ast {FUNC, DECL, EXP, FINALEXP, STMT, COMPUNIT, VARIABLE};
 
 static void print_indent(int indent) {
     for(int i = 0; i < indent; ++i) cout << "\t";
@@ -87,11 +87,18 @@ public:
     void print(int indent) const override;
 };
 
-// class for number(e.g. 2, 3.4)
+// class for number (e.g. 2, 3.4)
 class FinalExp : public BaseAST {
 public:
     type Exp_type;
     float Number;
+
+    void print(int indent) const override;
+};
+
+class Variable : public BaseAST {
+public:
+    string Var_name;
 
     void print(int indent) const override;
 };
