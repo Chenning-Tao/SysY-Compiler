@@ -40,7 +40,7 @@ extern int yylineno;
 %token <float_val> FLOAT_CONST
 
 // none terminal type
-%type <ast_val> LOrExp LAndExp EqExp RelExp Cond AddExp MulExp PrimaryExp UnaryExp Exp FuncDef FuncType Block Stmt Decl CompUnit ConstDecl VarDecl BType ConstDef ConstExp BlockItem_Wrap BlockItem VarDef Number InitVal
+%type <ast_val> LVal LOrExp LAndExp EqExp RelExp Cond AddExp MulExp PrimaryExp UnaryExp Exp FuncDef FuncType Block Stmt Decl CompUnit ConstDecl VarDecl BType ConstDef ConstExp BlockItem_Wrap BlockItem VarDef Number InitVal
 
 %%
 
@@ -280,18 +280,32 @@ Exp : AddExp { $$ = $1; };
 Cond : LOrExp { $$ = $1; } ;
 
 LVal
-	: IDENT { }
+	: IDENT { 
+		auto ast = new Variable();
+		ast->AST_type = VARIABLE;
+		ast->Var_name = *unique_ptr<string>($1);
+		$$ = ast;
+	}
 	| IDENT Exp_Wrap { }
 	;
 
 PrimaryExp
 	: '(' Exp ')' { }
-	| LVal { }
+	| LVal { 
+		auto ast = new Exp();
+		ast->AST_type = EXP;
+		ast->Name = "LVal";
+		ast->Left_exp = unique_ptr<BaseAST>($1);
+		ast->Right_exp = nullptr;
+		ast->Operator = "";
+		$$ = ast;
+	}
 	| Number { 
 		auto ast = new Exp();
 		ast->AST_type = EXP;
 		ast->Name = "Number";
 		ast->Left_exp = unique_ptr<BaseAST>($1);
+		ast->Right_exp = nullptr;
 		ast->Operator = "";
 		$$ = ast;
 	}

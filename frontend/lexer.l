@@ -13,6 +13,7 @@ using namespace std;
 
 %}
 
+/* TODO: add negative number */
 WhiteSpace    [ \t\n\r]*
 LineComment   "//".*$
 
