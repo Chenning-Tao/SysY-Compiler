@@ -7,6 +7,7 @@
 
 %{
 
+#define YYDEBUG 1
 #include <iostream>
 #include <memory>
 #include <string>
@@ -53,13 +54,21 @@ CompUnit
 		$$ = func;
 	}
 	| Decl {
-		// auto decl = make_unique<CompUnit>();
-		// $1->Name = "Decl";
-		// decl->CompUnits.push_back(unique_ptr<BaseAST>($1));
-		// ast = move(decl);
+		auto decl = new CompUnit();
+		decl->Name = "CompUnits";
+		$1->Name = "Decl";
+		decl->CompUnits.push_back(unique_ptr<BaseAST>($1));
+		ast = unique_ptr<CompUnit>(decl);
+		$$ = decl;
 	}
 	| CompUnit Decl {
-		
+		auto comp_unit = new CompUnit();
+		comp_unit->Name = "CompUnits";
+		$2->Name = "Decl";
+		comp_unit->CompUnits = move(reinterpret_cast<CompUnit*>$1->CompUnits);
+		comp_unit->CompUnits.push_back(unique_ptr<BaseAST>($2));
+		ast = unique_ptr<CompUnit>(comp_unit);
+		$$ = comp_unit;
 	}
 	| CompUnit FuncDef {
 		auto comp_unit = new CompUnit();
@@ -118,32 +127,43 @@ ConstInitVal_Wrap
 	;
 
 VarDecl
-	: BType VarDef ';' {
-		auto ast = new Decl();
-		ast->Name = "VarDecl";
-		ast->Const = false;
-		ast->Decl_type = reinterpret_cast<Decl*>$1->Decl_type;
-		ast->Var_name = reinterpret_cast<Decl*>$2->Var_name;
-		ast->Exp = move(reinterpret_cast<Decl*>$2->Exp);
-		$$ = ast;
-	}
-	;
+	: VarDef ';' { $$ = $1; };
 
+// use this to solve shift/reduce conflict
+// TODO: find a better way
 VarDef
-	: IDENT { 
+	: INT IDENT { 
 		auto ast = new Decl();
-		ast->Var_name = *unique_ptr<string>($1);
+		ast->Decl_type = Int;
+		ast->Var_name = *unique_ptr<string>($2);
 		ast->Exp = nullptr;
 		$$ = ast;
 	}
-	| IDENT '=' InitVal { 
+	| INT IDENT '=' InitVal { 
 		auto ast = new Decl();
-		ast->Var_name = *unique_ptr<string>($1);
-		ast->Exp = unique_ptr<BaseAST>($3);
+		ast->Decl_type = Int;
+		ast->Var_name = *unique_ptr<string>($2);
+		ast->Exp = unique_ptr<BaseAST>($4);
 		$$ = ast;
 	}
-	| IDENT ConstExp_Wrap { }
-	| IDENT ConstExp_Wrap '=' InitVal { }
+	| INT IDENT ConstExp_Wrap { }
+	| INT IDENT ConstExp_Wrap '=' InitVal { }
+	| FLOAT IDENT { 
+		auto ast = new Decl();
+		ast->Decl_type = Float;
+		ast->Var_name = *unique_ptr<string>($2);
+		ast->Exp = nullptr;
+		$$ = ast;
+	}
+	| FLOAT IDENT '=' InitVal { 
+		auto ast = new Decl();
+		ast->Decl_type = Float;
+		ast->Var_name = *unique_ptr<string>($2);
+		ast->Exp = unique_ptr<BaseAST>($4);
+		$$ = ast;
+	}
+	| FLOAT IDENT ConstExp_Wrap { }
+	| FLOAT IDENT ConstExp_Wrap '=' InitVal { }
 	;
 
 InitVal
