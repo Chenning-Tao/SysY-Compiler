@@ -10,6 +10,7 @@ using namespace std;
 
 extern FILE *yyin;
 extern int yyparse(unique_ptr<BaseAST> &ast);
+extern int yydebug;
 
 int main(int argc, const char *argv[]) {
     auto input = argv[1];
@@ -20,6 +21,7 @@ int main(int argc, const char *argv[]) {
 
     // using parser func
     unique_ptr<BaseAST> ast;
+    // yydebug = 1;
     auto ret = yyparse(ast);
     assert(!ret);
     ast->print(0);
