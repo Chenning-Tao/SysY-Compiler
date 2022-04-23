@@ -34,7 +34,10 @@ private:
     std::unique_ptr<IRBuilder<>> GenBuilder;
     std::unique_ptr<Module> GenModule;
     std::map<std::string, Value *> NamedValues;
-    Type * GetFuncType(type FuncType);
+    BasicBlock *createBB(Function *fooFunc, const std::string& Name);
+    Value *CreateExp(unique_ptr<BaseAST> &input);
+    Value *CreateCondition(unique_ptr<BaseAST> &input);
+    Type *GetFuncType(type FuncType);
     void FuncGen(unique_ptr<BaseAST> &Unit);
 public:
     explicit gen(const string& name);

@@ -40,9 +40,25 @@ void gen::FuncGen(unique_ptr<BaseAST> &Unit) {
     // create block
     BasicBlock *BB = BasicBlock::Create(*GenContext, FuncUnit->Func_name, F);
     GenBuilder->SetInsertPoint(BB);
+    Value *test;
+    for (auto & Block : FuncUnit->Blocks){
+        if (Block->AST_type == STMT){
+            unique_ptr<Stmt> StmtUnit(reinterpret_cast<Stmt*>(Block.release()));
+            if (StmtUnit->Stmt_type == If) {
+                BasicBlock *entry = createBB(F, "entry");
+                BasicBlock *ThenBB = createBB(F, "then");
+                BasicBlock *ElseBB = createBB(F, "else");
+                BasicBlock *MergeBB = createBB(F, "ifcond");
+
+                // condition generation
+//                CreateCondition(StmtUnit->Condition);
+                test = CreateExp(StmtUnit->Condition);
+            }
+        }
+    }
 
     // return val
-    GenBuilder->CreateRetVoid();
+    GenBuilder->CreateRet(test);
 }
 
 gen::gen(const string& name) {
@@ -59,6 +75,45 @@ Type *gen::GetFuncType(type FuncType) {
             return Type::getFloatTy(*GenContext);
         case Void:
             return Type::getVoidTy(*GenContext);
+    }
+}
+
+BasicBlock *gen::createBB(Function *fooFunc, const string &Name) {
+    return BasicBlock::Create(*GenContext, Name, fooFunc);
+}
+
+Value *gen::CreateCondition(unique_ptr<BaseAST> &input) {
+    unique_ptr<Exp> condition(reinterpret_cast<Exp*>(input.release()));
+}
+
+Value *gen::CreateExp(unique_ptr<BaseAST> &input) {
+    if (input->AST_type == FINALEXP) {
+        unique_ptr<FinalExp> expression(reinterpret_cast<FinalExp*>(input.release()));
+        if(expression->Exp_type == Float) return ConstantFP::get(*GenContext, APFloat(expression->Number));
+        else if(expression->Exp_type == Int) return ConstantInt::get(*GenContext, APInt(32, int(expression->Number)));
+    }
+    else if (input->AST_type == EXP) {
+        unique_ptr<Exp> expression(reinterpret_cast<Exp*>(input.release()));
+        Value *L = CreateExp(expression->Left_exp);
+        if (expression->Operator.empty()) return L;
+        Value *R = CreateExp(expression->Right_exp);
+        if(expression->Operator == "+"){
+            if(L->getType()->isIntegerTy() && R->getType()->isIntegerTy())
+                return GenBuilder->CreateAdd(L, R);
+        }
+        else if(expression->Operator == "-"){
+            if(L->getType()->isIntegerTy() && R->getType()->isIntegerTy())
+                return GenBuilder->CreateSub(L, R);
+        }
+        else if(expression->Operator == "*"){
+            if(L->getType()->isIntegerTy() && R->getType()->isIntegerTy())
+                return GenBuilder->CreateMul(L, R);
+        }
+        else if(expression->Operator == "/"){
+            Value *LF = GenBuilder->CreateUIToFP(L, Type::getFloatTy(*GenContext));
+            Value *RF = GenBuilder->CreateUIToFP(R, Type::getFloatTy(*GenContext));
+            return GenBuilder->CreateFDiv(LF, RF);
+        }
     }
 }
 
