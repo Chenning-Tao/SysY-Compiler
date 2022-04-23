@@ -40,7 +40,7 @@ extern int yylineno;
 %token <float_val> FLOAT_CONST
 
 // none terminal type
-%type <ast_val> AddExp MulExp PrimaryExp UnaryExp Exp FuncDef FuncType Block Stmt Decl CompUnit ConstDecl VarDecl BType ConstDef ConstExp BlockItem_Wrap BlockItem VarDef Number InitVal
+%type <ast_val> LOrExp LAndExp EqExp RelExp Cond AddExp MulExp PrimaryExp UnaryExp Exp FuncDef FuncType Block Stmt Decl CompUnit ConstDecl VarDecl BType ConstDef ConstExp BlockItem_Wrap BlockItem VarDef Number InitVal
 
 %%
 
@@ -48,7 +48,9 @@ CompUnit
 	: FuncDef {
 		auto func = new CompUnit();
 		func->Name = "CompUnits";
+		func->AST_type = COMPUNIT;
 		$1->Name = "FuncDef";
+		$1->AST_type = FUNC;
 		func->CompUnits.push_back(unique_ptr<BaseAST>($1));
 		ast = unique_ptr<CompUnit>(func);
 		$$ = func;
@@ -56,7 +58,9 @@ CompUnit
 	| Decl {
 		auto decl = new CompUnit();
 		decl->Name = "CompUnits";
-		$1->Name = "Decl";
+		decl->AST_type = COMPUNIT;
+		$1->Name = "DeclStmt";
+		$1->AST_type = DECL;
 		decl->CompUnits.push_back(unique_ptr<BaseAST>($1));
 		ast = unique_ptr<CompUnit>(decl);
 		$$ = decl;
@@ -64,7 +68,8 @@ CompUnit
 	| CompUnit Decl {
 		auto comp_unit = new CompUnit();
 		comp_unit->Name = "CompUnits";
-		$2->Name = "Decl";
+		comp_unit->AST_type = COMPUNIT;
+		$2->Name = "DeclStmt";
 		comp_unit->CompUnits = move(reinterpret_cast<CompUnit*>$1->CompUnits);
 		comp_unit->CompUnits.push_back(unique_ptr<BaseAST>($2));
 		ast = unique_ptr<CompUnit>(comp_unit);
@@ -73,6 +78,7 @@ CompUnit
 	| CompUnit FuncDef {
 		auto comp_unit = new CompUnit();
 		comp_unit->Name = "CompUnits";
+		comp_unit->AST_type = COMPUNIT;
 		$2->Name = "FuncDef";
 		comp_unit->CompUnits = move(reinterpret_cast<CompUnit*>$1->CompUnits);
 		comp_unit->CompUnits.push_back(unique_ptr<BaseAST>($2));
@@ -82,10 +88,8 @@ CompUnit
 	;
 
 Decl
-	: ConstDecl { } 
-	| VarDecl { 
-		$$ = $1;
-	}
+	: ConstDecl { $$ = $1; } 
+	| VarDecl { $1->Name = "VarDecl"; $$ = $1; }
 	; 
 
 ConstDecl
@@ -126,8 +130,7 @@ ConstInitVal_Wrap
 	| ',' ConstInitVal ConstInitVal_Wrap { }
 	;
 
-VarDecl
-	: VarDef ';' { $$ = $1; };
+VarDecl : VarDef ';' { $$ = $1; };
 
 // use this to solve shift/reduce conflict
 // TODO: find a better way
@@ -167,13 +170,7 @@ VarDef
 	;
 
 InitVal
-	: Exp { 
-		auto ast = new Exp();
-		ast->Name = "InitVal";
-		ast->Left_exp = unique_ptr<BaseAST>($1);
-		ast->Operator = "";
-		$$ = ast;
-	}
+	: Exp { $$ = $1; }
 	| '{''}' { }
 	| '{' InitVal '}' { }
 	| '{' InitVal InitVal_Wrap '}' { }
@@ -238,11 +235,7 @@ Exp_Wrap
 	| '[' Exp ']' Exp_Wrap { }
 	;
 
-Block
-	: '{' BlockItem_Wrap '}' {
-		$$ = $2;
-	}
-	;
+Block : '{' BlockItem_Wrap '}' { $$ = $2; } ;
 
 BlockItem_Wrap
 	: BlockItem { 
@@ -258,42 +251,33 @@ BlockItem_Wrap
 	;
 
 BlockItem
-	: Decl { 
-		$$ = $1;
-	}
-	| Stmt {
-		// auto ast = new Stat();
-	}
-	;
+	: Decl { $$ = $1; }
+	| Stmt { $$ = $1; } ;
 
 Stmt
 	: LVal '=' Exp ';'{ }
 	| Exp ';'{ }
-	| Block { }
-	| IF '(' Cond ')' Stmt { }
+	| Block { $$ = $1; }
+	| IF '(' Cond ')' Stmt {  
+		auto ast = new Stmt();
+		ast->Name = "IfStmt";
+		ast->AST_type = STMT;
+		ast->Stmt_type = If;
+		ast->Condition = unique_ptr<BaseAST>($3);
+		ast->Blocks = move(reinterpret_cast<Func*>$5->Blocks);
+		$$ = ast;
+	}
 	| IF '(' Cond ')' Stmt ELSE Stmt { }
 	| WHILE '(' Cond ')' Stmt { }
 	| BREAK ';' { }
 	| CONTINUE ';' { }
 	| RETURN Exp ';' { }
 	| RETURN ';' { }
-	/* | RETURN Number ';' {
-		auto frontend = new StmtAST();
-		frontend->re = *unique_ptr<string>(new string("return"));
-		frontend->number = $2;
-		$$ = frontend;
-	} */
 	;
 
-Exp
-	: AddExp { 
-		$$ = $1;
-	}
-	;
+Exp : AddExp { $$ = $1; };
 
-Cond 
-	: LOrExp { }
-	;
+Cond : LOrExp { $$ = $1; } ;
 
 LVal
 	: IDENT { }
@@ -304,7 +288,12 @@ PrimaryExp
 	: '(' Exp ')' { }
 	| LVal { }
 	| Number { 
-		$$ = $1;
+		auto ast = new Exp();
+		ast->AST_type = EXP;
+		ast->Name = "Number";
+		ast->Left_exp = unique_ptr<BaseAST>($1);
+		ast->Operator = "";
+		$$ = ast;
 	}
 	;
 
@@ -312,6 +301,7 @@ Number
 	: INT_CONST { 
 		auto ast = new FinalExp();
 		ast->Name = "IntConst";
+		ast->AST_type = FINALEXP;
 		ast->Exp_type = Int;
 		ast->Number = $1;
 		$$ = ast;
@@ -319,6 +309,7 @@ Number
 	| FLOAT_CONST { 
 		auto ast = new FinalExp();
 		ast->Name = "FloatConst";
+		ast->AST_type = FINALEXP;
 		ast->Exp_type = Float;
 		ast->Number = $1;
 		$$ = ast; 
@@ -326,9 +317,7 @@ Number
 	;
 
 UnaryExp
-	: PrimaryExp { 
-		$$ = $1;
-	}
+	: PrimaryExp { $$ = $1;}
 	| IDENT '(' ')' { }
 	| IDENT '(' FuncRParams ')' { }
 	| UnaryOp UnaryExp
@@ -350,24 +339,20 @@ FuncRParams_Wrap
 	| ',' Exp FuncRParams_Wrap { }
 
 MulExp
-	: UnaryExp { 
-		$$ = $1;
-	}
+	: UnaryExp { $$ = $1; }
 	| MulExp '*' UnaryExp { }
 	| MulExp '/' UnaryExp { }
 	| MulExp '%' UnaryExp { }
 	;
 
 AddExp
-	: MulExp { 
-		$$ = $1;
-	}
+	: MulExp { $$ = $1; }
 	| AddExp '+' MulExp { }
 	| AddExp '-' MulExp { }
 	;
 
 RelExp
-	: AddExp { }
+	: AddExp { $$ = $1; }
 	| RelExp '<' AddExp { }
 	| RelExp '>' AddExp { }
 	| RelExp '<' '=' AddExp { }
@@ -375,18 +360,26 @@ RelExp
 	;
 
 EqExp
-	: RelExp { }
-	| EqExp '=' '=' RelExp { }
+	: RelExp { $$ = $1; }
+	| EqExp '=' '=' RelExp { 
+		auto ast = new Exp();
+		ast->AST_type = EXP;
+		ast->Name = "EqExp";
+		ast->Left_exp = unique_ptr<BaseAST>($1);
+		ast->Operator = "==";
+		ast->Right_exp = unique_ptr<BaseAST>($4);
+		$$ = ast;
+	}
 	| EqExp '!' '=' RelExp { }
 	;
 
 LAndExp
-	: EqExp { }
+	: EqExp { $$ = $1; }
 	| LAndExp '&' '&' EqExp { }
 	;
 
 LOrExp
-	: LAndExp { }
+	: LAndExp { $$ = $1; }
 	| LOrExp '|' '|' LAndExp { }
 	;
 

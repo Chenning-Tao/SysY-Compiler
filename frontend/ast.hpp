@@ -11,6 +11,8 @@
 using namespace std;
 
 enum type {Int, Float, Void};
+enum stmt {If, While, Break, Continue, Return, Expression};
+enum ast {FUNC, DECL, EXP, FINALEXP, STMT, COMPUNIT };
 
 static void print_indent(int indent) {
     for(int i = 0; i < indent; ++i) cout << "\t";
@@ -35,6 +37,7 @@ class BaseAST {
 private:
 public:
     string Name;
+    ast AST_type;
     virtual ~BaseAST() = default;
     virtual void print(int indent) const = 0;
 };
@@ -62,9 +65,15 @@ public:
 };
 
 // class for statement(e.g. for, if)
-// TODO: add unit
-class Stat : public BaseAST {
+class Stmt : public BaseAST {
 public:
+    stmt Stmt_type;
+    unique_ptr<BaseAST> Left;
+    unique_ptr<BaseAST> Right;
+    // for if stmt, Blocks[0] -> if, Blocks[1] -> else
+    vector<unique_ptr<BaseAST>> Blocks;
+    unique_ptr<BaseAST> Condition;
+
     void print(int indent) const override;
 };
 

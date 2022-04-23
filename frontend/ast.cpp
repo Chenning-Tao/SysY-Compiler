@@ -13,12 +13,35 @@ void Decl::print(int indent) const {
     }
 }
 
-void Stat::print(int indent) const {
-
+void Stmt::print(int indent) const {
+    cout << Name << endl;
+    switch (Stmt_type) {
+        case If:
+            print_indent(indent);
+            cout << "Condition" << endl;
+            Condition->print(++indent);
+            cout << endl;
+            print_indent(--indent);
+            cout << "StmtBlock" << endl;
+            for(const auto & Block : Blocks){
+                print_indent(++indent);
+                Block->print(indent);
+                --indent;
+                cout << endl;
+            }
+            break;
+    }
 }
 
 void Exp::print(int indent) const {
     if (Operator.empty()) Left_exp->print(indent);
+    else {
+        print_indent(indent);
+        cout << Name << "\t" << Operator << endl;
+        Left_exp->print(++indent);
+        cout << endl;
+        Right_exp->print(indent);
+    }
 }
 
 void FinalExp::print(int indent) const {
@@ -30,10 +53,9 @@ void Func::print(int indent) const {
     cout << Name << "\t" << Func_name << "\t";
     print_type(Func_type);
     cout << endl;
-    ++indent;
     for(const auto & Block : Blocks){
         print_indent(indent);
-        Block->print(indent);
+        Block->print(++indent);
         cout << endl;
     }
 
