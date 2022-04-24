@@ -51,8 +51,17 @@ void gen::FuncGen(unique_ptr<BaseAST> &Unit) {
                 BasicBlock *MergeBB = createBB(F, "ifcond");
 
                 // condition generation
-//                CreateCondition(StmtUnit->Condition);
-                test = CreateExp(StmtUnit->Condition);
+                Value *cond = CreateCondition(StmtUnit->Condition);
+                test = cond;
+                GenBuilder->CreateCondBr(cond, ThenBB, ElseBB);
+
+                // condition = true
+                GenBuilder->SetInsertPoint(ThenBB);
+                GenBuilder->CreateBr(MergeBB);
+
+                // condition = false
+                GenBuilder->SetInsertPoint(ElseBB);
+                GenBuilder->CreateBr(MergeBB);
             }
         }
     }
@@ -84,6 +93,9 @@ BasicBlock *gen::createBB(Function *fooFunc, const string &Name) {
 
 Value *gen::CreateCondition(unique_ptr<BaseAST> &input) {
     unique_ptr<Exp> condition(reinterpret_cast<Exp*>(input.release()));
+    Value *L = CreateExp(condition->Left_exp);
+    Value *R = CreateExp(condition->Right_exp);
+    return GenBuilder->CreateICmpEQ(L, R, "ifcond");
 }
 
 Value *gen::CreateExp(unique_ptr<BaseAST> &input) {
@@ -95,24 +107,32 @@ Value *gen::CreateExp(unique_ptr<BaseAST> &input) {
     else if (input->AST_type == EXP) {
         unique_ptr<Exp> expression(reinterpret_cast<Exp*>(input.release()));
         Value *L = CreateExp(expression->Left_exp);
+        // fake EXP node
         if (expression->Operator.empty()) return L;
         Value *R = CreateExp(expression->Right_exp);
+        bool is_float = !(L->getType()->isIntegerTy() && R->getType()->isIntegerTy());
+        if (is_float){
+            if(L->getType()->isFloatTy()) L = GenBuilder->CreateUIToFP(L, Type::getFloatTy(*GenContext));
+            if(R->getType()->isFloatTy()) R = GenBuilder->CreateUIToFP(R, Type::getFloatTy(*GenContext));
+        }
+
+        // expression generation
         if(expression->Operator == "+"){
-            if(L->getType()->isIntegerTy() && R->getType()->isIntegerTy())
-                return GenBuilder->CreateAdd(L, R);
+            if (is_float) return GenBuilder->CreateFAdd(L, R);
+            else return GenBuilder->CreateAdd(L, R);
         }
         else if(expression->Operator == "-"){
-            if(L->getType()->isIntegerTy() && R->getType()->isIntegerTy())
-                return GenBuilder->CreateSub(L, R);
+            if (is_float) return GenBuilder->CreateFSub(L, R);
+            else return GenBuilder->CreateSub(L, R);
         }
         else if(expression->Operator == "*"){
-            if(L->getType()->isIntegerTy() && R->getType()->isIntegerTy())
-                return GenBuilder->CreateMul(L, R);
+            if (is_float) return GenBuilder->CreateFMul(L, R);
+            else return GenBuilder->CreateMul(L, R);
         }
         else if(expression->Operator == "/"){
-            Value *LF = GenBuilder->CreateUIToFP(L, Type::getFloatTy(*GenContext));
-            Value *RF = GenBuilder->CreateUIToFP(R, Type::getFloatTy(*GenContext));
-            return GenBuilder->CreateFDiv(LF, RF);
+            if(L->getType()->isFloatTy()) L = GenBuilder->CreateUIToFP(L, Type::getFloatTy(*GenContext));
+            if(R->getType()->isFloatTy()) R = GenBuilder->CreateUIToFP(R, Type::getFloatTy(*GenContext));
+            return GenBuilder->CreateFDiv(L, R);
         }
     }
 }
