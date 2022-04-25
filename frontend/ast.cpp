@@ -23,7 +23,7 @@ void Stmt::print(int indent) const {
             cout << endl;
             print_indent(--indent);
             cout << "StmtBlock" << endl;
-            for(const auto & Block : Blocks){
+            for(const auto & Block : First_block){
                 print_indent(++indent);
                 Block->print(indent);
                 --indent;

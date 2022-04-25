@@ -70,8 +70,9 @@ public:
     stmt Stmt_type;
     unique_ptr<BaseAST> Left;
     unique_ptr<BaseAST> Right;
-    // for if stmt, Blocks[0] -> if, Blocks[1] -> else
-    vector<unique_ptr<BaseAST>> Blocks;
+    // second_block is only used in IF-ELSE statement
+    vector<unique_ptr<BaseAST>> First_block;
+    vector<unique_ptr<BaseAST>> Second_block;
     unique_ptr<BaseAST> Condition;
 
     void print(int indent) const override;

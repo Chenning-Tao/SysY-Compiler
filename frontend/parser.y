@@ -270,7 +270,7 @@ Stmt
 		ast->AST_type = STMT;
 		ast->Stmt_type = If;
 		ast->Condition = unique_ptr<BaseAST>($3);
-		ast->Blocks = move(reinterpret_cast<Func*>$5->Blocks);
+		ast->First_block = move(reinterpret_cast<Func*>$5->Blocks);
 		$$ = ast;
 	}
 	| IF '(' Cond ')' Stmt ELSE Stmt { }
@@ -390,7 +390,15 @@ EqExp
 		ast->Right_exp = unique_ptr<BaseAST>($4);
 		$$ = ast;
 	}
-	| EqExp '!' '=' RelExp { }
+	| EqExp '!' '=' RelExp { 
+		auto ast = new Exp();
+		ast->AST_type = EXP;
+		ast->Name = "EqExp";
+		ast->Left_exp = unique_ptr<BaseAST>($1);
+		ast->Operator = "!=";
+		ast->Right_exp = unique_ptr<BaseAST>($4);
+		$$ = ast;
+	}
 	;
 
 LAndExp
