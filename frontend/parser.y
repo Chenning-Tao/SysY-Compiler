@@ -69,6 +69,7 @@ CompUnit
 		auto comp_unit = new CompUnit();
 		comp_unit->Name = "CompUnits";
 		comp_unit->AST_type = COMPUNIT;
+		$2->AST_type = DECL;
 		$2->Name = "DeclStmt";
 		comp_unit->CompUnits = move(reinterpret_cast<CompUnit*>$1->CompUnits);
 		comp_unit->CompUnits.push_back(unique_ptr<BaseAST>($2));
@@ -79,6 +80,7 @@ CompUnit
 		auto comp_unit = new CompUnit();
 		comp_unit->Name = "CompUnits";
 		comp_unit->AST_type = COMPUNIT;
+		$2->AST_type = FUNC;
 		$2->Name = "FuncDef";
 		comp_unit->CompUnits = move(reinterpret_cast<CompUnit*>$1->CompUnits);
 		comp_unit->CompUnits.push_back(unique_ptr<BaseAST>($2));
@@ -89,7 +91,11 @@ CompUnit
 
 Decl
 	: ConstDecl { $$ = $1; } 
-	| VarDecl { $1->Name = "VarDecl"; $$ = $1; }
+	| VarDecl { 
+		$1->Name = "VarDecl"; 
+		$1->AST_type = DECL;
+		$$ = $1; 
+	}
 	; 
 
 ConstDecl

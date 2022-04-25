@@ -8,19 +8,17 @@ using namespace llvm;
 
 void gen::ProgramGen(unique_ptr<CompUnit> &program) {
     for (auto & Unit : program->CompUnits) {
-        if (Unit->Name == "FuncDef") FuncGen(Unit);
-        else if (Unit->Name == "Decl") {
-            Value *InitVal = ConstantFP::get(*GenContext, APFloat(0.0));
-//    IRBuilder<> TmpB(&F->getEntryBlock(), F->getEntryBlock().begin());
-//    AllocaInst *Alloca = TmpB.CreateAlloca(Type::getFloatTy(*GenContext), 0, "testfloat");
-//    GenBuilder->CreateStore(InitVal, Alloca);
+        if (Unit->AST_type == FUNC) FuncGen(Unit);
+        // create global variable
+        else if (Unit->AST_type == DECL) {
+            unique_ptr<Decl> global(reinterpret_cast<Decl*>(Unit.release()));
+            GlobalVariable *gVar = createGlob(GetFuncType(global->Decl_type), global->Var_name);
+            if (global->Exp != nullptr)
+                gVar->setInitializer(dyn_cast<Constant>(CreateExp(global->Exp)));
 
-            Value *Init = ConstantInt::get(*GenContext, APInt(32, 1));
 //    IRBuilder<> Tmp(&F->getEntryBlock(), F->getEntryBlock().begin());
 //    AllocaInst *Alloc = Tmp.CreateAlloca(Type::getInt32Ty(*GenContext), 0, "testint");
 //    GenBuilder->CreateStore(Init, Alloc);
-
-            Value *re = GenBuilder->CreateFAdd(InitVal, Init, "addtmp");
         }
     }
     GenModule->print(outs(), nullptr);
@@ -38,8 +36,9 @@ void gen::FuncGen(unique_ptr<BaseAST> &Unit) {
     Function *F = Function::Create(FT, Function::ExternalLinkage, FuncUnit->Func_name, GenModule.get());
 
     // create block
-    BasicBlock *BB = BasicBlock::Create(*GenContext, FuncUnit->Func_name, F);
+    BasicBlock *BB = createBB(F, FuncUnit->Func_name);
     GenBuilder->SetInsertPoint(BB);
+
     Value *test;
     for (auto & Block : FuncUnit->Blocks){
         if (Block->AST_type == STMT){
@@ -95,7 +94,16 @@ Value *gen::CreateCondition(unique_ptr<BaseAST> &input) {
     unique_ptr<Exp> condition(reinterpret_cast<Exp*>(input.release()));
     Value *L = CreateExp(condition->Left_exp);
     Value *R = CreateExp(condition->Right_exp);
-    return GenBuilder->CreateICmpEQ(L, R, "ifcond");
+    bool is_float = GenFloat(L, R);
+    if (condition->Operator == "==") {
+        if (is_float) return GenBuilder->CreateFCmpOEQ(L, R, "ifcond");
+        else return GenBuilder->CreateICmpEQ(L, R, "ifcond");
+    }
+    // TODO: verify
+    else if (condition->Operator == "!="){
+        if (is_float) return GenBuilder->CreateFCmpONE(L, R, "ifcond");
+        else return GenBuilder->CreateICmpNE(L, R, "ifcond");
+    }
 }
 
 Value *gen::CreateExp(unique_ptr<BaseAST> &input) {
@@ -110,11 +118,7 @@ Value *gen::CreateExp(unique_ptr<BaseAST> &input) {
         // fake EXP node
         if (expression->Operator.empty()) return L;
         Value *R = CreateExp(expression->Right_exp);
-        bool is_float = !(L->getType()->isIntegerTy() && R->getType()->isIntegerTy());
-        if (is_float){
-            if(L->getType()->isFloatTy()) L = GenBuilder->CreateUIToFP(L, Type::getFloatTy(*GenContext));
-            if(R->getType()->isFloatTy()) R = GenBuilder->CreateUIToFP(R, Type::getFloatTy(*GenContext));
-        }
+        bool is_float = GenFloat(L, R);
 
         // expression generation
         if(expression->Operator == "+"){
@@ -135,5 +139,20 @@ Value *gen::CreateExp(unique_ptr<BaseAST> &input) {
             return GenBuilder->CreateFDiv(L, R);
         }
     }
+}
+
+bool gen::GenFloat(Value *&L, Value *&R) {
+    bool is_float= !(L->getType()->isIntegerTy() && R->getType()->isIntegerTy());
+    if (is_float){
+        if(L->getType()->isFloatTy()) L = GenBuilder->CreateUIToFP(L, Type::getFloatTy(*GenContext));
+        if(R->getType()->isFloatTy()) R = GenBuilder->CreateUIToFP(R, Type::getFloatTy(*GenContext));
+    }
+    return is_float;
+}
+
+GlobalVariable *gen::createGlob(Type *type, const std::string& name) {
+    GenModule->getOrInsertGlobal(name, type);
+    GlobalVariable *gVar = GenModule->getNamedGlobal(name);
+    return gVar;
 }
 

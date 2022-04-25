@@ -7,6 +7,8 @@
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/ValueSymbolTable.h"
+#include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -35,6 +37,7 @@ private:
     std::unique_ptr<Module> GenModule;
     std::map<std::string, Value *> NamedValues;
     BasicBlock *createBB(Function *fooFunc, const std::string& Name);
+    GlobalVariable *createGlob(Type *type, const std::string& name);
     Value *CreateExp(unique_ptr<BaseAST> &input);
     Value *CreateCondition(unique_ptr<BaseAST> &input);
     Type *GetFuncType(type FuncType);
@@ -42,6 +45,8 @@ private:
 public:
     explicit gen(const string& name);
     void ProgramGen(unique_ptr<CompUnit> &program);
+
+    bool GenFloat(Value *&L, Value *&R);
 };
 
 
