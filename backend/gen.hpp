@@ -36,6 +36,7 @@ private:
     std::unique_ptr<IRBuilder<>> GenBuilder;
     std::unique_ptr<Module> GenModule;
     std::map<std::string, Value *> NamedValues;
+    std::unordered_map<std::string, GlobalVariable *> GlobalValues;
     BasicBlock *createBB(Function *fooFunc, const std::string& Name);
     GlobalVariable *createGlob(Type *type, const std::string& name);
     Value *CreateExp(unique_ptr<BaseAST> &input);
@@ -47,6 +48,8 @@ public:
     void ProgramGen(unique_ptr<CompUnit> &program);
 
     bool GenFloat(Value *&L, Value *&R);
+
+    void GlobalVarGen(unique_ptr<BaseAST> &Unit);
 };
 
 

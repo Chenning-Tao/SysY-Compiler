@@ -9,19 +9,21 @@ using namespace llvm;
 void gen::ProgramGen(unique_ptr<CompUnit> &program) {
     for (auto & Unit : program->CompUnits) {
         if (Unit->AST_type == FUNC) FuncGen(Unit);
-        // create global variable
-        else if (Unit->AST_type == DECL) {
-            unique_ptr<Decl> global(reinterpret_cast<Decl*>(Unit.release()));
-            GlobalVariable *gVar = createGlob(GetFuncType(global->Decl_type), global->Var_name);
-            if (global->Exp != nullptr)
-                gVar->setInitializer(dyn_cast<Constant>(CreateExp(global->Exp)));
-
-//    IRBuilder<> Tmp(&F->getEntryBlock(), F->getEntryBlock().begin());
-//    AllocaInst *Alloc = Tmp.CreateAlloca(Type::getInt32Ty(*GenContext), 0, "testint");
-//    GenBuilder->CreateStore(Init, Alloc);
-        }
+        else if (Unit->AST_type == DECL) GlobalVarGen(Unit);
     }
     GenModule->print(outs(), nullptr);
+}
+
+void gen::GlobalVarGen(unique_ptr<BaseAST> &Unit) {
+    unique_ptr<Decl> global(reinterpret_cast<Decl*>(Unit.release()));
+    // determine whether it has been declared
+    if (GlobalValues.find(global->Var_name) == GlobalValues.end()) {
+        GlobalVariable *gVar = createGlob(GetFuncType(global->Decl_type), global->Var_name);
+        if (global->Exp != nullptr)
+            gVar->setInitializer(dyn_cast<Constant>(CreateExp(global->Exp)));
+        GlobalValues.emplace(global->Var_name, gVar);
+    }
+    else cout << "error: redefinition of '"<< global->Var_name << "'" << endl;
 }
 
 void gen::FuncGen(unique_ptr<BaseAST> &Unit) {
@@ -156,3 +158,6 @@ GlobalVariable *gen::createGlob(Type *type, const std::string& name) {
     return gVar;
 }
 
+//    IRBuilder<> Tmp(&F->getEntryBlock(), F->getEntryBlock().begin());
+//    AllocaInst *Alloc = Tmp.CreateAlloca(Type::getInt32Ty(*GenContext), 0, "testint");
+//    GenBuilder->CreateStore(Init, Alloc);
