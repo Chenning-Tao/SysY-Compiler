@@ -39,17 +39,18 @@ private:
     std::unordered_map<std::string, GlobalVariable *> GlobalValues;
     BasicBlock *createBB(Function *fooFunc, const std::string& Name);
     GlobalVariable *createGlob(Type *type, const std::string& name);
-    Value *CreateExp(unique_ptr<BaseAST> &input);
-    Value *CreateCondition(unique_ptr<BaseAST> &input);
+    AllocaInst *createEntryBlockAlloca(Function *TheFunction, const std::string &VarName, type VarType);
+    Value *IntToFloat(Value *input);
+
+    Value *ExpGen(unique_ptr<BaseAST> &input);
+    Value *ConditionGen(unique_ptr<BaseAST> &input);
     Type *GetFuncType(type FuncType);
+    bool FloatGen(Value *&L, Value *&R);
+    void GlobalVarGen(unique_ptr<BaseAST> &Unit);
     void FuncGen(unique_ptr<BaseAST> &Unit);
 public:
     explicit gen(const string& name);
     void ProgramGen(unique_ptr<CompUnit> &program);
-
-    bool GenFloat(Value *&L, Value *&R);
-
-    void GlobalVarGen(unique_ptr<BaseAST> &Unit);
 };
 
 
