@@ -68,16 +68,23 @@ void gen::FuncGen(unique_ptr<BaseAST> &Unit) {
         else if(Block->AST_type == DECL){
             unique_ptr<Decl> DeclUnit(reinterpret_cast<Decl*>(Block.release()));
             Function *cur = GenBuilder->GetInsertBlock()->getParent();
-            // get init value
-            Value *InitVal = nullptr;
-            if (DeclUnit->Exp != nullptr) {
-                InitVal = ExpGen(DeclUnit->Exp);
-                if (DeclUnit->Decl_type == Float && InitVal->getType()->isIntegerTy())
-                    InitVal = IntToFloat(InitVal);
+            // check symbol table
+            auto SymTable = GenBuilder->GetInsertBlock()->getValueSymbolTable();
+            if (SymTable->lookup(DeclUnit->Var_name) == nullptr) {
+                // get init value
+                Value *InitVal = nullptr;
+                if (DeclUnit->Exp != nullptr) {
+                    InitVal = ExpGen(DeclUnit->Exp);
+                    if (DeclUnit->Decl_type == Float && InitVal->getType()->isIntegerTy())
+                        InitVal = IntToFloat(InitVal);
+                }
+                // create IR
+                AllocaInst *Alloca = createEntryBlockAlloca(cur, DeclUnit->Var_name, DeclUnit->Decl_type);
+                GenBuilder->CreateStore(InitVal, Alloca);
             }
-            // create IR
-            AllocaInst *Alloca = createEntryBlockAlloca(cur, DeclUnit->Var_name, DeclUnit->Decl_type);
-            GenBuilder->CreateStore(InitVal, Alloca);
+            else {
+                cout << "error: redefinition of '"<< DeclUnit->Var_name << "'" << endl;
+            }
         }
     }
 
