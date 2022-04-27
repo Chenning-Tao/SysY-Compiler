@@ -2,12 +2,12 @@ cmake_minimum_required(VERSION 3.19)
 project(compiler)
 
 set (CMAKE_CXX_STANDARD 17)
-#set (CMAKE_CXX_FLAGS '-g')
+set (CMAKE_CXX_FLAGS '-g')
 
 # find required package
 find_package(FLEX REQUIRED)
 find_package(BISON REQUIRED)
-find_package(LLVM REQUIRED)
+find_package(LLVM REQUIRED CONFIG)
 
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
@@ -31,8 +31,13 @@ include_directories(${PROJECT_SOURCE_DIR})
 include_directories(${PROJECT_SOURCE_DIR}/frontend)
 include_directories(${PROJECT_SOURCE_DIR}/backend)
 
+separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
+add_definitions(${LLVM_DEFINITIONS_LIST})
+include_directories(${LLVM_INCLUDE_DIRS})
+
+
 add_executable(compiler ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS} main.cpp frontend/ast.cpp backend/gen.cpp backend/gen.hpp backend/symbolTable.cpp backend/symbolTable.hpp)
 
-llvm_map_components_to_libnames(llvm_libs analysis core executionengine instcombine object orcjit runtimedyld scalaropts support native irreader mcjit)
+llvm_map_components_to_libnames(llvm_libs ${LLVM_TARGETS_TO_BUILD} support core irreader codegen mc mcparser option)
 
 target_link_libraries(compiler ${llvm_libs})
