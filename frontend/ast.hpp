@@ -11,7 +11,7 @@
 using namespace std;
 
 enum type {Int, Float, Void};
-enum stmt {If, While, Break, Continue, Return, Expression};
+enum stmt {If, While, Break, Continue, Return, Assign};
 enum ast {FUNC, DECL, EXP, FINALEXP, STMT, COMPUNIT, VARIABLE};
 
 static void print_indent(int indent) {
@@ -68,8 +68,8 @@ public:
 class Stmt : public BaseAST {
 public:
     stmt Stmt_type;
-    unique_ptr<BaseAST> Left;
-    unique_ptr<BaseAST> Right;
+    unique_ptr<BaseAST> LVal;
+    unique_ptr<BaseAST> RVal;
     // second_block is only used in IF-ELSE statement
     vector<unique_ptr<BaseAST>> First_block;
     vector<unique_ptr<BaseAST>> Second_block;

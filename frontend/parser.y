@@ -90,7 +90,11 @@ CompUnit
 	;
 
 Decl
-	: ConstDecl { $$ = $1; } 
+	: ConstDecl { 
+		$1->Name = "ConstDecl";
+		$1->AST_type = DECL;
+		$$ = $1; 
+	} 
 	| VarDecl { 
 		$1->Name = "VarDecl"; 
 		$1->AST_type = DECL;
@@ -261,7 +265,15 @@ BlockItem
 	| Stmt { $$ = $1; } ;
 
 Stmt
-	: LVal '=' Exp ';'{ }
+	: LVal '=' Exp ';'{ 
+		auto ast = new Stmt();
+		ast->Name = "BinaryOpStmt";
+		ast->AST_type = STMT;
+		ast->Stmt_type = Assign;
+		ast->LVal = unique_ptr<BaseAST>($1);
+		ast->RVal = unique_ptr<BaseAST>($3);
+		$$ = ast;
+	}
 	| Exp ';'{ }
 	| Block { $$ = $1; }
 	| IF '(' Cond ')' Stmt {  
@@ -297,15 +309,7 @@ LVal
 
 PrimaryExp
 	: '(' Exp ')' { }
-	| LVal { 
-		auto ast = new Exp();
-		ast->AST_type = EXP;
-		ast->Name = "LVal";
-		ast->Left_exp = unique_ptr<BaseAST>($1);
-		ast->Right_exp = nullptr;
-		ast->Operator = "";
-		$$ = ast;
-	}
+	| LVal { $$ = $1; }
 	| Number { 
 		auto ast = new Exp();
 		ast->AST_type = EXP;

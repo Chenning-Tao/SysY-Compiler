@@ -38,7 +38,12 @@ void Stmt::print(int indent) const {
             break;
         case Return:
             break;
-        case Expression:
+        case Assign:
+            print_indent(++indent);
+            LVal->print(indent);
+            cout << endl;
+            print_indent(indent);
+            RVal->print(indent);
             break;
     }
 }
@@ -48,14 +53,15 @@ void Exp::print(int indent) const {
     else {
         print_indent(indent);
         cout << Name << "\t" << Operator << endl;
-        Left_exp->print(++indent);
+        print_indent(++indent);
+        Left_exp->print(indent);
         cout << endl;
+        print_indent(indent);
         Right_exp->print(indent);
     }
 }
 
 void FinalExp::print(int indent) const {
-    print_indent(indent);
     cout << Name << "\t" << Number;
 }
 
@@ -64,8 +70,9 @@ void Func::print(int indent) const {
     print_type(Func_type);
     cout << endl;
     for(const auto & Block : Blocks){
-        print_indent(indent);
-        Block->print(++indent);
+        print_indent(++indent);
+        Block->print(indent);
+        --indent;
         cout << endl;
     }
 
@@ -79,5 +86,5 @@ void CompUnit::print(int indent) const {
 }
 
 void Variable::print(int indent) const {
-
+    cout << "Var\t" <<  Var_name;
 }
