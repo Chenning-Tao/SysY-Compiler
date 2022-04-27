@@ -46,8 +46,6 @@ void gen::FuncGen(unique_ptr<BaseAST> &Unit) {
         else if(Block->AST_type == DECL) DeclGen(Block, removeList);
     }
     NamedValues.remove(removeList);
-    // return val
-    GenBuilder->CreateRetVoid();
 }
 
 void gen::DeclGen(unique_ptr<BaseAST> &Block, vector<std::string> &removeList) {
@@ -76,22 +74,28 @@ void gen::DeclGen(unique_ptr<BaseAST> &Block, vector<std::string> &removeList) {
 void gen::StmtGen(Function *F, unique_ptr<BaseAST> &Block) {
     unique_ptr<Stmt> StmtUnit(reinterpret_cast<Stmt*>(Block.release()));
     if (StmtUnit->Stmt_type == If) IfGen(F, StmtUnit);
-    else if(StmtUnit->Stmt_type == Assign) {
-        unique_ptr<Variable> VarUnit(reinterpret_cast<Variable*>(StmtUnit->LVal.release()));
-        // check symbol table
-        AllocaInst *var = NamedValues.find(VarUnit->Var_name);
-        if (var == nullptr) {
-            cout << "error: use of undeclared identifier '" << VarUnit->Var_name << "'" << endl;
-            exit(0);
-        }
-        // type conversion
-        Value *right = ExpGen(StmtUnit->RVal);
-        if (var->getAllocatedType() != right->getType()){
-            if (var->getAllocatedType()->isIntegerTy()) right = FloatToInt(right);
-            else if (var->getAllocatedType()->isFloatTy()) right = IntToFloat(right);
-        }
-        GenBuilder->CreateStore(right, var);
+    else if(StmtUnit->Stmt_type == Assign) AssignGen(StmtUnit);
+    else if(StmtUnit->Stmt_type == Return){
+        if(StmtUnit->RVal == nullptr) GenBuilder->CreateRetVoid();
+        else GenBuilder->CreateRet(ExpGen(StmtUnit->RVal));
     }
+}
+
+void gen::AssignGen(unique_ptr<Stmt> &StmtUnit) {
+    unique_ptr<Variable> VarUnit(reinterpret_cast<Variable*>(StmtUnit->LVal.release()));
+    // check symbol table
+    AllocaInst *var = NamedValues.find(VarUnit->Var_name);
+    if (var == nullptr) {
+        cout << "error: use of undeclared identifier '" << VarUnit->Var_name << "'" << endl;
+        exit(0);
+    }
+    // type conversion
+    Value *right = ExpGen(StmtUnit->RVal);
+    if (var->getAllocatedType() != right->getType()){
+        if (var->getAllocatedType()->isIntegerTy()) right = FloatToInt(right);
+        else if (var->getAllocatedType()->isFloatTy()) right = IntToFloat(right);
+    }
+    GenBuilder->CreateStore(right, var);
 }
 
 void gen::IfGen(Function *F, unique_ptr<Stmt> &StmtUnit) {
@@ -173,13 +177,7 @@ Value *gen::ExpGen(unique_ptr<BaseAST> &input) {
     }
     else if (input->AST_type == VARIABLE){
         unique_ptr<Variable> variable(reinterpret_cast<Variable*>(input.release()));
-        // check symbol table
-        AllocaInst *var = NamedValues.find(variable->Var_name);
-        if (var == nullptr) {
-            cout << "error: use of undeclared identifier '" << variable->Var_name << "'" << endl;
-            exit(0);
-        }
-        return GenBuilder->CreateLoad(var->getAllocatedType(), var, var->getName().data());
+        return LoadValue(variable->Var_name);
     }
     else if (input->AST_type == EXP) {
         unique_ptr<Exp> expression(reinterpret_cast<Exp*>(input.release()));
@@ -208,6 +206,15 @@ Value *gen::ExpGen(unique_ptr<BaseAST> &input) {
             return GenBuilder->CreateFDiv(L, R);
         }
     }
+}
+
+Value *gen::LoadValue(const string &temp_name) {// check symbol table
+    AllocaInst *var = NamedValues.find(temp_name);
+    if (var == nullptr) {
+        cout << "error: use of undeclared identifier '" << temp_name << "'" << endl;
+        exit(0);
+    }
+    return GenBuilder->CreateLoad(var->getAllocatedType(), var, var->getName().data());
 }
 
 bool gen::FloatGen(Value *&L, Value *&R) {

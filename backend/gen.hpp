@@ -58,6 +58,10 @@ private:
 public:
     explicit gen(const string& name);
     void ProgramGen(unique_ptr<CompUnit> &program);
+
+    void AssignGen(unique_ptr<Stmt> &StmtUnit);
+
+    Value *LoadValue(const string &temp_name);
 };
 
 

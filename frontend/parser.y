@@ -289,8 +289,24 @@ Stmt
 	| WHILE '(' Cond ')' Stmt { }
 	| BREAK ';' { }
 	| CONTINUE ';' { }
-	| RETURN Exp ';' { }
-	| RETURN ';' { }
+	| RETURN Exp ';' { 
+		auto ast = new Stmt();
+		ast->Name = "ReturnStmt";
+		ast->AST_type = STMT;
+		ast->Stmt_type = Return;
+		// put return Exp in RVal
+		ast->RVal = unique_ptr<BaseAST>($2);
+		$$ = ast;
+	}
+	| RETURN ';' { 
+		auto ast = new Stmt();
+		ast->Name = "ReturnStmt";
+		ast->AST_type = STMT;
+		ast->Stmt_type = Return;
+		// put return Exp in RVal
+		ast->RVal = nullptr;
+		$$ = ast;
+	}
 	;
 
 Exp : AddExp { $$ = $1; };
