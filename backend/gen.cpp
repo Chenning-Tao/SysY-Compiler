@@ -67,7 +67,7 @@ void gen::DeclGen(unique_ptr<BaseAST> &Block, vector<std::string> &removeList) {
     }
     // create IR
     AllocaInst *Alloca = createBlockAlloca(*cur, DeclUnit->Var_name, DeclUnit->Decl_type);
-    GenBuilder->CreateStore(InitVal, Alloca);
+    if (InitVal != nullptr) GenBuilder->CreateStore(InitVal, Alloca);
     // add to symbol table
     NamedValues.insert(DeclUnit->Var_name, Alloca);
     removeList.push_back(DeclUnit->Var_name);
@@ -76,6 +76,22 @@ void gen::DeclGen(unique_ptr<BaseAST> &Block, vector<std::string> &removeList) {
 void gen::StmtGen(Function *F, unique_ptr<BaseAST> &Block) {
     unique_ptr<Stmt> StmtUnit(reinterpret_cast<Stmt*>(Block.release()));
     if (StmtUnit->Stmt_type == If) IfGen(F, StmtUnit);
+    else if(StmtUnit->Stmt_type == Assign) {
+        unique_ptr<Variable> VarUnit(reinterpret_cast<Variable*>(StmtUnit->LVal.release()));
+        // check symbol table
+        AllocaInst *var = NamedValues.find(VarUnit->Var_name);
+        if (var == nullptr) {
+            cout << "error: use of undeclared identifier '" << VarUnit->Var_name << "'" << endl;
+            exit(0);
+        }
+        // type conversion
+        Value *right = ExpGen(StmtUnit->RVal);
+        if (var->getAllocatedType() != right->getType()){
+            if (var->getAllocatedType()->isIntegerTy()) right = FloatToInt(right);
+            else if (var->getAllocatedType()->isFloatTy()) right = IntToFloat(right);
+        }
+        GenBuilder->CreateStore(right, var);
+    }
 }
 
 void gen::IfGen(Function *F, unique_ptr<Stmt> &StmtUnit) {
@@ -103,7 +119,12 @@ void gen::IfGen(Function *F, unique_ptr<Stmt> &StmtUnit) {
 }
 
 Value *gen::IntToFloat(Value *InitVal) {
-    InitVal = GenBuilder->CreateUIToFP(InitVal, Type::getFloatTy(*GenContext));
+    InitVal = GenBuilder->CreateSIToFP(InitVal, Type::getFloatTy(*GenContext));
+    return InitVal;
+}
+
+Value *gen::FloatToInt(Value *InitVal) {
+    InitVal = GenBuilder->CreateFPToSI(InitVal, Type::getInt32Ty(*GenContext));
     return InitVal;
 }
 
@@ -172,8 +193,8 @@ Value *gen::ExpGen(unique_ptr<BaseAST> &input) {
             else return GenBuilder->CreateMul(L, R);
         }
         else if(expression->Operator == "/"){
-            if(L->getType()->isFloatTy()) L = GenBuilder->CreateUIToFP(L, Type::getFloatTy(*GenContext));
-            if(R->getType()->isFloatTy()) R = GenBuilder->CreateUIToFP(R, Type::getFloatTy(*GenContext));
+            if(L->getType()->isFloatTy()) L = GenBuilder->CreateSIToFP(L, Type::getFloatTy(*GenContext));
+            if(R->getType()->isFloatTy()) R = GenBuilder->CreateSIToFP(R, Type::getFloatTy(*GenContext));
             return GenBuilder->CreateFDiv(L, R);
         }
     }

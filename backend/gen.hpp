@@ -44,6 +44,7 @@ private:
     GlobalVariable *createGlob(Type *type, const std::string& name);
     AllocaInst *createBlockAlloca(BasicBlock &block, const string &VarName, type VarType);
     Value *IntToFloat(Value *input);
+    Value *FloatToInt(Value *InitVal);
 
     Value *ExpGen(unique_ptr<BaseAST> &input);
     Value *ConditionGen(unique_ptr<BaseAST> &input);
