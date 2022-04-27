@@ -40,56 +40,66 @@ void gen::FuncGen(unique_ptr<BaseAST> &Unit) {
     // create block
     BasicBlock *BB = createBB(F, FuncUnit->Func_name);
     GenBuilder->SetInsertPoint(BB);
-
-    Value *test;
+    std::vector<std::string> removeList;
     for (auto & Block : FuncUnit->Blocks){
-        if (Block->AST_type == STMT){
-            unique_ptr<Stmt> StmtUnit(reinterpret_cast<Stmt*>(Block.release()));
-            if (StmtUnit->Stmt_type == If) {
-                BasicBlock *entry = createBB(F, "entry");
-                BasicBlock *ThenBB = createBB(F, "then");
-                BasicBlock *ElseBB = createBB(F, "else");
-                BasicBlock *MergeBB = createBB(F, "ifcond");
-
-                // condition generation
-                Value *cond = ConditionGen(StmtUnit->Condition);
-                test = cond;
-                GenBuilder->CreateCondBr(cond, ThenBB, ElseBB);
-
-                // condition = true
-                GenBuilder->SetInsertPoint(ThenBB);
-                GenBuilder->CreateBr(MergeBB);
-
-                // condition = false
-                GenBuilder->SetInsertPoint(ElseBB);
-                GenBuilder->CreateBr(MergeBB);
-            }
-        }
-        else if(Block->AST_type == DECL){
-            unique_ptr<Decl> DeclUnit(reinterpret_cast<Decl*>(Block.release()));
-            Function *cur = GenBuilder->GetInsertBlock()->getParent();
-            // check symbol table
-            auto SymTable = GenBuilder->GetInsertBlock()->getValueSymbolTable();
-            if (SymTable->lookup(DeclUnit->Var_name) == nullptr) {
-                // get init value
-                Value *InitVal = nullptr;
-                if (DeclUnit->Exp != nullptr) {
-                    InitVal = ExpGen(DeclUnit->Exp);
-                    if (DeclUnit->Decl_type == Float && InitVal->getType()->isIntegerTy())
-                        InitVal = IntToFloat(InitVal);
-                }
-                // create IR
-                AllocaInst *Alloca = createEntryBlockAlloca(cur, DeclUnit->Var_name, DeclUnit->Decl_type);
-                GenBuilder->CreateStore(InitVal, Alloca);
-            }
-            else {
-                cout << "error: redefinition of '"<< DeclUnit->Var_name << "'" << endl;
-            }
-        }
+        if (Block->AST_type == STMT) StmtGen(F, Block);
+        else if(Block->AST_type == DECL) DeclGen(Block, removeList);
     }
-
+    NamedValues.remove(removeList);
     // return val
-    GenBuilder->CreateRet(test);
+    GenBuilder->CreateRetVoid();
+}
+
+void gen::DeclGen(unique_ptr<BaseAST> &Block, vector<std::string> &removeList) {
+    unique_ptr<Decl> DeclUnit(reinterpret_cast<Decl*>(Block.release()));
+    auto *cur = GenBuilder->GetInsertBlock();
+    // check redefinition
+    auto check_sym = find(removeList.begin(), removeList.end(), DeclUnit->Var_name);
+    if (check_sym != removeList.end()) {
+        cout << "error: redefinition of '"<< DeclUnit->Var_name << "'" << endl;
+        exit(0);
+    }
+    Value *InitVal = nullptr;
+    if (DeclUnit->Exp != nullptr) {
+        InitVal = ExpGen(DeclUnit->Exp);
+        if (DeclUnit->Decl_type == Float && InitVal->getType()->isIntegerTy())
+            InitVal = IntToFloat(InitVal);
+    }
+    // create IR
+    AllocaInst *Alloca = createBlockAlloca(*cur, DeclUnit->Var_name, DeclUnit->Decl_type);
+    GenBuilder->CreateStore(InitVal, Alloca);
+    // add to symbol table
+    NamedValues.insert(DeclUnit->Var_name, Alloca);
+    removeList.push_back(DeclUnit->Var_name);
+}
+
+void gen::StmtGen(Function *F, unique_ptr<BaseAST> &Block) {
+    unique_ptr<Stmt> StmtUnit(reinterpret_cast<Stmt*>(Block.release()));
+    if (StmtUnit->Stmt_type == If) IfGen(F, StmtUnit);
+}
+
+void gen::IfGen(Function *F, unique_ptr<Stmt> &StmtUnit) {
+    BasicBlock *ThenBB = createBB(F, "then");
+    BasicBlock *ElseBB = createBB(F, "else");
+    BasicBlock *MergeBB = createBB(F, "ifcond");
+
+    // condition generation
+    Value *cond = ConditionGen(StmtUnit->Condition);
+    GenBuilder->CreateCondBr(cond, ThenBB, ElseBB);
+
+    // condition = true
+    GenBuilder->SetInsertPoint(ThenBB);
+    std::vector<std::string> removeList;
+    for(auto &true_block : StmtUnit->First_block){
+        if(true_block->AST_type == DECL) DeclGen(true_block, removeList);
+        else if(true_block->AST_type == STMT) StmtGen(F, true_block);
+    }
+    NamedValues.remove(removeList);
+    GenBuilder->CreateBr(MergeBB);
+
+    // condition = false
+    GenBuilder->SetInsertPoint(ElseBB);
+    GenBuilder->CreateBr(MergeBB);
 }
 
 Value *gen::IntToFloat(Value *InitVal) {
@@ -184,11 +194,7 @@ GlobalVariable *gen::createGlob(Type *type, const std::string& name) {
     return gVar;
 }
 
-AllocaInst *gen::createEntryBlockAlloca(Function *TheFunction, const string &VarName, type VarType) {
-    IRBuilder<> TmpB(&TheFunction->getEntryBlock(), TheFunction->getEntryBlock().begin());
+AllocaInst *gen::createBlockAlloca(BasicBlock &block, const string &VarName, type VarType) {
+    IRBuilder<> TmpB(&block, block.begin());
     return TmpB.CreateAlloca(GetFuncType(VarType), nullptr, VarName);
 }
-
-//    IRBuilder<> Tmp(&F->getEntryBlock(), F->getEntryBlock().begin());
-//    AllocaInst *Alloc = Tmp.CreateAlloca(Type::getInt32Ty(*GenContext), 0, "testint");
-//    GenBuilder->CreateStore(Init, Alloc);
