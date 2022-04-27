@@ -371,7 +371,15 @@ MulExp
 
 AddExp
 	: MulExp { $$ = $1; }
-	| AddExp '+' MulExp { }
+	| AddExp '+' MulExp { 
+		auto ast = new Exp();
+		ast->AST_type = EXP;
+		ast->Name = "AddExp";
+		ast->Left_exp = unique_ptr<BaseAST>($1);
+		ast->Right_exp = unique_ptr<BaseAST>($3);
+		ast->Operator = "+";
+		$$ = ast;
+	}
 	| AddExp '-' MulExp { }
 	;
 

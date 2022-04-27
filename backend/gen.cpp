@@ -171,6 +171,16 @@ Value *gen::ExpGen(unique_ptr<BaseAST> &input) {
         if(expression->Exp_type == Float) return ConstantFP::get(*GenContext, APFloat(expression->Number));
         else if(expression->Exp_type == Int) return ConstantInt::get(*GenContext, APInt(32, int(expression->Number)));
     }
+    else if (input->AST_type == VARIABLE){
+        unique_ptr<Variable> variable(reinterpret_cast<Variable*>(input.release()));
+        // check symbol table
+        AllocaInst *var = NamedValues.find(variable->Var_name);
+        if (var == nullptr) {
+            cout << "error: use of undeclared identifier '" << variable->Var_name << "'" << endl;
+            exit(0);
+        }
+        return GenBuilder->CreateLoad(var->getAllocatedType(), var, var->getName().data());
+    }
     else if (input->AST_type == EXP) {
         unique_ptr<Exp> expression(reinterpret_cast<Exp*>(input.release()));
         Value *L = ExpGen(expression->Left_exp);
@@ -203,8 +213,8 @@ Value *gen::ExpGen(unique_ptr<BaseAST> &input) {
 bool gen::FloatGen(Value *&L, Value *&R) {
     bool is_float= !(L->getType()->isIntegerTy() && R->getType()->isIntegerTy());
     if (is_float){
-        if(L->getType()->isFloatTy()) L = IntToFloat(L);
-        if(R->getType()->isFloatTy()) R = IntToFloat(R);
+        if(L->getType()->isIntegerTy()) L = IntToFloat(L);
+        if(R->getType()->isIntegerTy()) R = IntToFloat(R);
     }
     return is_float;
 }

@@ -51,7 +51,6 @@ void Stmt::print(int indent) const {
 void Exp::print(int indent) const {
     if (Operator.empty()) Left_exp->print(indent);
     else {
-        print_indent(indent);
         cout << Name << "\t" << Operator << endl;
         print_indent(++indent);
         Left_exp->print(indent);
@@ -75,7 +74,6 @@ void Func::print(int indent) const {
         --indent;
         cout << endl;
     }
-
 }
 
 void CompUnit::print(int indent) const {
