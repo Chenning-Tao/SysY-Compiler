@@ -18,6 +18,14 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/MC/TargetRegistry.h"
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Host.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOptions.h"
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
@@ -45,11 +53,13 @@ private:
     AllocaInst *createBlockAlloca(BasicBlock &block, const string &VarName, type VarType);
     Value *IntToFloat(Value *input);
     Value *FloatToInt(Value *InitVal);
+    Value *LoadValue(const string &temp_name);
 
     Value *ExpGen(unique_ptr<BaseAST> &input);
     Value *ConditionGen(unique_ptr<BaseAST> &input);
     Type *GetFuncType(type FuncType);
     bool FloatGen(Value *&L, Value *&R);
+    void AssignGen(unique_ptr<Stmt> &StmtUnit);
     void IfGen(Function *F, unique_ptr<Stmt> &StmtUnit);
     void GlobalVarGen(unique_ptr<BaseAST> &Unit);
     void DeclGen(unique_ptr<BaseAST> &Block, vector<std::string> &removeList);
@@ -59,9 +69,7 @@ public:
     explicit gen(const string& name);
     void ProgramGen(unique_ptr<CompUnit> &program);
 
-    void AssignGen(unique_ptr<Stmt> &StmtUnit);
-
-    Value *LoadValue(const string &temp_name);
+    void OutputGen();
 };
 
 
