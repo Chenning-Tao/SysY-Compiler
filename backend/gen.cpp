@@ -7,12 +7,24 @@
 using namespace llvm;
 
 void gen::ProgramGen(unique_ptr<CompUnit> &program) {
+    // init external function
+    InitExternalFunction();
     for (auto & Unit : program->CompUnits) {
         if (Unit->AST_type == FUNC) FuncGen(Unit);
         else if (Unit->AST_type == DECL) GlobalVarGen(Unit);
     }
     GenModule->print(outs(), nullptr);
     OutputGen();
+}
+
+void gen::InitExternalFunction() {
+    // int getint()
+    FunctionType *getintTy = FunctionType::get(GetFuncType(Int), false);
+    Function *getint = Function::Create(getintTy, Function::ExternalLinkage, "getint", GenModule.get());
+    // void putint(a)
+    std::vector<Type *> putintParas(1, GetFuncType(Int));
+    FunctionType *putintTy = FunctionType::get(GetFuncType(Void), putintParas, false);
+    Function *putint = Function::Create(putintTy, Function::ExternalLinkage, "putint", GenModule.get());
 }
 
 void gen::OutputGen() {
@@ -76,7 +88,7 @@ void gen::GlobalVarGen(unique_ptr<BaseAST> &Unit) {
     if (GlobalValues.find(global->Var_name) == GlobalValues.end()) {
         GlobalVariable *gVar = createGlob(GetFuncType(global->Decl_type), global->Var_name);
         if (global->Exp != nullptr)
-            gVar->setInitializer(dyn_cast<Constant>(ExpGen(global->Exp)));
+            gVar->setInitializer(dyn_cast<Constant>(ValueGen(global->Exp)));
         GlobalValues.emplace(global->Var_name, gVar);
     }
     else cout << "error: redefinition of '"<< global->Var_name << "'" << endl;
@@ -101,6 +113,7 @@ void gen::FuncGen(unique_ptr<BaseAST> &Unit) {
     for (auto & Block : FuncUnit->Blocks){
         if (Block->AST_type == STMT) StmtGen(F, Block);
         else if(Block->AST_type == DECL) DeclGen(Block, removeList);
+        else if(Block->AST_type == FUNCPROTO) FuncCallGen(Block);
     }
     NamedValues.remove(removeList);
 }
@@ -116,7 +129,7 @@ void gen::DeclGen(unique_ptr<BaseAST> &Block, vector<std::string> &removeList) {
     }
     Value *InitVal = nullptr;
     if (DeclUnit->Exp != nullptr) {
-        InitVal = ExpGen(DeclUnit->Exp);
+        InitVal = ValueGen(DeclUnit->Exp);
         if (DeclUnit->Decl_type == Float && InitVal->getType()->isIntegerTy())
             InitVal = IntToFloat(InitVal);
     }
@@ -134,7 +147,7 @@ void gen::StmtGen(Function *F, unique_ptr<BaseAST> &Block) {
     else if(StmtUnit->Stmt_type == Assign) AssignGen(StmtUnit);
     else if(StmtUnit->Stmt_type == Return){
         if(StmtUnit->RVal == nullptr) GenBuilder->CreateRetVoid();
-        else GenBuilder->CreateRet(ExpGen(StmtUnit->RVal));
+        else GenBuilder->CreateRet(ValueGen(StmtUnit->RVal));
     }
 }
 
@@ -147,7 +160,7 @@ void gen::AssignGen(unique_ptr<Stmt> &StmtUnit) {
         exit(0);
     }
     // type conversion
-    Value *right = ExpGen(StmtUnit->RVal);
+    Value *right = ValueGen(StmtUnit->RVal);
     if (var->getAllocatedType() != right->getType()){
         if (var->getAllocatedType()->isIntegerTy()) right = FloatToInt(right);
         else if (var->getAllocatedType()->isFloatTy()) right = IntToFloat(right);
@@ -215,8 +228,8 @@ BasicBlock *gen::createBB(Function *fooFunc, const string &Name) {
 
 Value *gen::ConditionGen(unique_ptr<BaseAST> &input) {
     unique_ptr<Exp> condition(reinterpret_cast<Exp*>(input.release()));
-    Value *L = ExpGen(condition->Left_exp);
-    Value *R = ExpGen(condition->Right_exp);
+    Value *L = ValueGen(condition->Left_exp);
+    Value *R = ValueGen(condition->Right_exp);
     bool is_float = FloatGen(L, R);
     if (condition->Operator == "==") {
         if (is_float) return GenBuilder->CreateFCmpOEQ(L, R, "ifcond");
@@ -229,7 +242,7 @@ Value *gen::ConditionGen(unique_ptr<BaseAST> &input) {
     }
 }
 
-Value *gen::ExpGen(unique_ptr<BaseAST> &input) {
+Value *gen::ValueGen(unique_ptr<BaseAST> &input) {
     if (input->AST_type == FINALEXP) {
         unique_ptr<FinalExp> expression(reinterpret_cast<FinalExp*>(input.release()));
         if(expression->Exp_type == Float) return ConstantFP::get(*GenContext, APFloat(expression->Number));
@@ -239,12 +252,13 @@ Value *gen::ExpGen(unique_ptr<BaseAST> &input) {
         unique_ptr<Variable> variable(reinterpret_cast<Variable*>(input.release()));
         return LoadValue(variable->Var_name);
     }
+    else if (input->AST_type == FUNCPROTO) return FuncCallGen(input);
     else if (input->AST_type == EXP) {
         unique_ptr<Exp> expression(reinterpret_cast<Exp*>(input.release()));
-        Value *L = ExpGen(expression->Left_exp);
+        Value *L = ValueGen(expression->Left_exp);
         // fake EXP node
         if (expression->Operator.empty()) return L;
-        Value *R = ExpGen(expression->Right_exp);
+        Value *R = ValueGen(expression->Right_exp);
         bool is_float = FloatGen(L, R);
 
         // expression generation
@@ -266,6 +280,21 @@ Value *gen::ExpGen(unique_ptr<BaseAST> &input) {
             return GenBuilder->CreateFDiv(L, R);
         }
     }
+}
+
+Value *gen::FuncCallGen(unique_ptr<BaseAST> &input) {
+    unique_ptr<FuncPrototype> prototype(reinterpret_cast<FuncPrototype*>(input.release()));
+    Function *CalleeF = GenModule->getFunction(prototype->Func_name);
+    if (CalleeF == nullptr) {
+        cout << "error: use of undeclared function '" << prototype->Func_name << "'" << endl;
+        exit(0);
+    }
+    vector<Value*> ArgsV{};
+    if (!prototype->Params.empty()){
+        for(auto & Param : prototype->Params)
+            ArgsV.push_back(ValueGen(Param));
+    }
+    return GenBuilder->CreateCall(CalleeF, ArgsV, "calltmp");
 }
 
 Value *gen::LoadValue(const string &temp_name) {// check symbol table

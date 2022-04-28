@@ -40,7 +40,7 @@ extern int yylineno;
 %token <float_val> FLOAT_CONST
 
 // none terminal type
-%type <ast_val> LVal LOrExp LAndExp EqExp RelExp Cond AddExp MulExp PrimaryExp UnaryExp Exp FuncDef FuncType Block Stmt Decl CompUnit ConstDecl VarDecl BType ConstDef ConstExp BlockItem_Wrap BlockItem VarDef Number InitVal
+%type <ast_val> FuncRParams LVal LOrExp LAndExp EqExp RelExp Cond AddExp MulExp PrimaryExp UnaryExp Exp FuncDef FuncType Block Stmt Decl CompUnit ConstDecl VarDecl BType ConstDef ConstExp BlockItem_Wrap BlockItem VarDef Number InitVal
 
 %%
 
@@ -364,7 +364,14 @@ UnaryExp
 		ast->Func_name = *unique_ptr<string>($1);
 		$$ = ast;
 	}
-	| IDENT '(' FuncRParams ')' { }
+	| IDENT '(' FuncRParams ')' { 
+		auto ast = new FuncPrototype();
+		ast->AST_type = FUNCPROTO;
+		ast->Name = "FuncCall";
+		ast->Func_name = *unique_ptr<string>($1);
+		ast->Params = move(reinterpret_cast<FuncPrototype*>$3->Params);
+		$$ = ast;
+	}
 	| UnaryOp UnaryExp
 	;
 
@@ -375,7 +382,12 @@ UnaryOp
 	;
 
 FuncRParams
-	: Exp { }
+	: Exp { 
+		auto ast = new FuncPrototype();
+		ast->AST_type = FUNCPROTO;
+		ast->Params.push_back(unique_ptr<BaseAST>($1));
+		$$ = ast;
+	}
 	| Exp FuncRParams_Wrap { }
 	;
 

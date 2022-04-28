@@ -55,7 +55,7 @@ private:
     Value *FloatToInt(Value *InitVal);
     Value *LoadValue(const string &temp_name);
 
-    Value *ExpGen(unique_ptr<BaseAST> &input);
+    Value *ValueGen(unique_ptr<BaseAST> &input);
     Value *ConditionGen(unique_ptr<BaseAST> &input);
     Type *GetFuncType(type FuncType);
     bool FloatGen(Value *&L, Value *&R);
@@ -70,6 +70,10 @@ public:
     void ProgramGen(unique_ptr<CompUnit> &program);
 
     void OutputGen();
+
+    void InitExternalFunction();
+
+    Value *FuncCallGen(unique_ptr<BaseAST> &input);
 };
 
 

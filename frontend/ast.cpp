@@ -92,4 +92,11 @@ void FuncPrototype::print(int indent) const {
     cout << Func_name << "\t";
     // TODO: identify call and declare
     print_type(Func_type);
+    if (Params.empty()) return;
+    cout << endl;
+    for (const auto & Param : Params){
+        print_indent(++indent);
+        Param->print(indent);
+        --indent;
+    }
 }
