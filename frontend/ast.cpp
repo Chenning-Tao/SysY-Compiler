@@ -90,5 +90,6 @@ void Variable::print(int indent) const {
 
 void FuncPrototype::print(int indent) const {
     cout << Func_name << "\t";
+    // TODO: identify call and declare
     print_type(Func_type);
 }

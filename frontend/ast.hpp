@@ -47,6 +47,7 @@ class FuncPrototype : public BaseAST {
 public:
     string Func_name;
     type Func_type;
+    vector<unique_ptr<BaseAST>> Params;
 
     void print(int indent) const override;
 };
@@ -55,7 +56,6 @@ public:
 class Func : public BaseAST {
 public:
     unique_ptr<BaseAST> Prototype;
-    vector<unique_ptr<BaseAST>> Params;
     vector<unique_ptr<BaseAST>> Blocks;
 
     void print(int indent) const override;

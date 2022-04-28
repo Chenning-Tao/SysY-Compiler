@@ -193,7 +193,6 @@ FuncDef
 		ast->Name = "FuncDef";
 		ast->AST_type = FUNC;
 		ast->Prototype = unique_ptr<BaseAST>($1);
-		ast->Params = vector<unique_ptr<BaseAST>>();
 		ast->Blocks = move(reinterpret_cast<Func*>$4->Blocks);
 		$$ = ast;
 	}
@@ -358,7 +357,13 @@ Number
 
 UnaryExp
 	: PrimaryExp { $$ = $1;}
-	| IDENT '(' ')' { }
+	| IDENT '(' ')' { 
+		auto ast = new FuncPrototype();
+		ast->AST_type = FUNCPROTO;
+		ast->Name = "FuncCall";
+		ast->Func_name = *unique_ptr<string>($1);
+		$$ = ast;
+	}
 	| IDENT '(' FuncRParams ')' { }
 	| UnaryOp UnaryExp
 	;
