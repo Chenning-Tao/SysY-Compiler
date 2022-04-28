@@ -49,8 +49,6 @@ CompUnit
 		auto func = new CompUnit();
 		func->Name = "CompUnits";
 		func->AST_type = COMPUNIT;
-		$1->Name = "FuncDef";
-		$1->AST_type = FUNC;
 		func->CompUnits.push_back(unique_ptr<BaseAST>($1));
 		ast = unique_ptr<CompUnit>(func);
 		$$ = func;
@@ -80,8 +78,6 @@ CompUnit
 		auto comp_unit = new CompUnit();
 		comp_unit->Name = "CompUnits";
 		comp_unit->AST_type = COMPUNIT;
-		$2->AST_type = FUNC;
-		$2->Name = "FuncDef";
 		comp_unit->CompUnits = move(reinterpret_cast<CompUnit*>$1->CompUnits);
 		comp_unit->CompUnits.push_back(unique_ptr<BaseAST>($2));
 		ast = unique_ptr<CompUnit>(comp_unit);
@@ -194,8 +190,9 @@ InitVal_Wrap
 FuncDef
 	: FuncType '(' ')' Block {
 		auto ast = new Func();
-		ast->Func_name = reinterpret_cast<Func*>$1->Func_name;
-		ast->Func_type = reinterpret_cast<Func*>$1->Func_type;
+		ast->Name = "FuncDef";
+		ast->AST_type = FUNC;
+		ast->Prototype = unique_ptr<BaseAST>($1);
 		ast->Params = vector<unique_ptr<BaseAST>>();
 		ast->Blocks = move(reinterpret_cast<Func*>$4->Blocks);
 		$$ = ast;
@@ -205,19 +202,22 @@ FuncDef
 
 FuncType
 	: INT IDENT {
-		auto ast = new Func();
+		auto ast = new FuncPrototype();
+		ast->AST_type = FUNCPROTO;
 		ast->Func_name = *unique_ptr<string>($2);
 		ast->Func_type = Int;
 		$$ = ast;
 	}
 	| FLOAT IDENT {
-		auto ast = new Func();
+		auto ast = new FuncPrototype();
+		ast->AST_type = FUNCPROTO;
 		ast->Func_name = *unique_ptr<string>($2);
 		ast->Func_type = Float;
 		$$ = ast;
 	}
 	| VOID IDENT {
-		auto ast = new Func();
+		auto ast = new FuncPrototype();
+		ast->AST_type = FUNCPROTO;
 		ast->Func_name = *unique_ptr<string>($2);
 		ast->Func_type = Void;
 		$$ = ast;

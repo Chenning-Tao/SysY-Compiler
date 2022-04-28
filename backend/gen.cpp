@@ -37,7 +37,6 @@ void gen::OutputGen() {
         exit(0);
     }
 
-
     auto CPU = "generic";
     auto Features = "";
 
@@ -91,11 +90,12 @@ void gen::FuncGen(unique_ptr<BaseAST> &Unit) {
     // Function
     // FunctionType *FT = FunctionType::get(Type::getVoidTy(GenContext), Para,false);
     // std::vector<Type *> Doubles(2, Type::getDoubleTy(*GenContext));
-    FunctionType *FT = FunctionType::get(GetFuncType(FuncUnit->Func_type), Para, false);
-    Function *F = Function::Create(FT, Function::ExternalLinkage, FuncUnit->Func_name, GenModule.get());
+    unique_ptr<FuncPrototype> Proto(reinterpret_cast<FuncPrototype*>(FuncUnit->Prototype.release()));
+    FunctionType *FT = FunctionType::get(GetFuncType(Proto->Func_type), Para, false);
+    Function *F = Function::Create(FT, Function::ExternalLinkage, Proto->Func_name, GenModule.get());
 
     // create block
-    BasicBlock *BB = createBB(F, FuncUnit->Func_name);
+    BasicBlock *BB = createBB(F, Proto->Func_name);
     GenBuilder->SetInsertPoint(BB);
     std::vector<std::string> removeList;
     for (auto & Block : FuncUnit->Blocks){
@@ -177,6 +177,9 @@ void gen::IfGen(Function *F, unique_ptr<Stmt> &StmtUnit) {
     // condition = false
     GenBuilder->SetInsertPoint(ElseBB);
     GenBuilder->CreateBr(MergeBB);
+
+    // merge
+//    PHINode *Phi = GenBuilder->CreatePHI()
 }
 
 Value *gen::IntToFloat(Value *InitVal) {

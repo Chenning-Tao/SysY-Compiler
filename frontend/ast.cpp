@@ -9,7 +9,8 @@ void Decl::print(int indent) const {
     print_type(Decl_type);
     if (this->Exp != nullptr) {
         cout << endl;
-        Exp->print(++indent);
+        print_indent(++indent);
+        Exp->print(indent);
     }
 }
 
@@ -65,8 +66,8 @@ void FinalExp::print(int indent) const {
 }
 
 void Func::print(int indent) const {
-    cout << Name << "\t" << Func_name << "\t";
-    print_type(Func_type);
+    cout << Name << "\t";
+    Prototype->print(indent);
     cout << endl;
     for(const auto & Block : Blocks){
         print_indent(++indent);
@@ -85,4 +86,9 @@ void CompUnit::print(int indent) const {
 
 void Variable::print(int indent) const {
     cout << "Var\t" <<  Var_name;
+}
+
+void FuncPrototype::print(int indent) const {
+    cout << Func_name << "\t";
+    print_type(Func_type);
 }
