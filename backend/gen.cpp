@@ -100,8 +100,6 @@ void gen::FuncGen(unique_ptr<BaseAST> &Unit) {
     vector<Type*> Para{};
 
     // Function
-    // FunctionType *FT = FunctionType::get(Type::getVoidTy(GenContext), Para,false);
-    // std::vector<Type *> Doubles(2, Type::getDoubleTy(*GenContext));
     unique_ptr<FuncPrototype> Proto(reinterpret_cast<FuncPrototype*>(FuncUnit->Prototype.release()));
     FunctionType *FT = FunctionType::get(GetFuncType(Proto->Func_type), Para, false);
     Function *F = Function::Create(FT, Function::ExternalLinkage, Proto->Func_name, GenModule.get());

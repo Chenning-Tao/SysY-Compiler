@@ -98,6 +98,7 @@ Decl
 	}
 	; 
 
+// TODO: add rule for const value
 ConstDecl
 	: CONST BType ConstDef ';' { }
 	;
@@ -175,6 +176,7 @@ VarDef
 	| FLOAT IDENT ConstExp_Wrap '=' InitVal { }
 	;
 
+// TODO: add rule for array init
 InitVal
 	: Exp { $$ = $1; }
 	| '{''}' { }
@@ -187,6 +189,7 @@ InitVal_Wrap
 	| ',' InitVal InitVal_Wrap { }
 	;
 
+// TODO: add rule to pass function parameters
 FuncDef
 	: FuncType '(' ')' Block {
 		auto ast = new Func();
@@ -239,6 +242,7 @@ FuncFParam
 	| BType IDENT '[' ']' Exp_Wrap { }
 	;
 
+// TODO: add rule for array
 Exp_Wrap
 	: '[' Exp ']' { }
 	| '[' Exp ']' Exp_Wrap { }
@@ -263,6 +267,7 @@ BlockItem
 	: Decl { $$ = $1; }
 	| Stmt { $$ = $1; } ;
 
+// TODO: add rule for while/break/continue
 Stmt
 	: LVal '=' Exp ';'{ 
 		auto ast = new Stmt();
@@ -312,6 +317,7 @@ Exp : AddExp { $$ = $1; };
 
 Cond : LOrExp { $$ = $1; } ;
 
+// TODO: add rule for array
 LVal
 	: IDENT { 
 		auto ast = new Variable();
