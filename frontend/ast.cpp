@@ -89,11 +89,11 @@ void CompUnit::print(int indent) const {
 void Variable::print(int indent) const {
     if (Length.empty()) cout << "Var\t" <<  Var_name;
     else {
-        cout << "Array\t" << Var_name << endl;
+        cout << "Array\t" << Var_name;
         for(const auto & i : Length){
+            cout << endl;
             print_indent(++indent);
             i->print(indent);
-            cout << endl;
             --indent;
         }
     }

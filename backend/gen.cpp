@@ -136,7 +136,12 @@ void gen::DeclGen(unique_ptr<BaseAST> &Block, vector<std::string> &removeList) {
             InitVal = IntToFloat(InitVal);
     }
     // create IR
-    AllocaInst *Alloca = createBlockAlloca(*cur, VarUnit->Var_name, DeclUnit->Decl_type);
+    AllocaInst *Alloca;
+    if (VarUnit->Length.empty()) Alloca = createBlockAlloca(*cur, VarUnit->Var_name, DeclUnit->Decl_type);
+    else {
+        Value *arraySize = ValueGen(VarUnit->Length[0]);
+        Alloca = createBlockAlloca(*cur, VarUnit->Var_name, DeclUnit->Decl_type, arraySize);
+    }
     if (InitVal != nullptr) GenBuilder->CreateStore(InitVal, Alloca);
     // add to symbol table
     NamedValues.insert(VarUnit->Var_name, Alloca);
@@ -167,7 +172,12 @@ void gen::AssignGen(unique_ptr<Stmt> &StmtUnit) {
         if (var->getAllocatedType()->isIntegerTy()) right = FloatToInt(right);
         else if (var->getAllocatedType()->isFloatTy()) right = IntToFloat(right);
     }
-    GenBuilder->CreateStore(right, var);
+    if (VarUnit->Length.empty()) GenBuilder->CreateStore(right, var);
+    else {
+        // if is array
+        Value *location = GenBuilder->CreateGEP(var->getAllocatedType(), var, ValueGen(VarUnit->Length[0]));
+        GenBuilder->CreateStore(right, location);
+    }
 }
 
 void gen::IfGen(Function *F, unique_ptr<Stmt> &StmtUnit) {
@@ -252,7 +262,17 @@ Value *gen::ValueGen(unique_ptr<BaseAST> &input) {
     }
     else if (input->AST_type == VARIABLE){
         unique_ptr<Variable> variable(reinterpret_cast<Variable*>(input.release()));
-        return LoadValue(variable->Var_name);
+        AllocaInst *var = NamedValues.find(variable->Var_name);
+        if (var == nullptr) {
+            cout << "error: use of undeclared identifier '" << variable->Var_name << "'" << endl;
+            exit(0);
+        }
+        if (variable->Length.empty())
+            return GenBuilder->CreateLoad(var->getAllocatedType(), var, var->getName().data());
+        else {
+            Value *location = GenBuilder->CreateGEP(var->getAllocatedType(), var, ValueGen(variable->Length[0]));
+            return GenBuilder->CreateLoad(GetFuncType(Int), location, var->getName().data());
+        }
     }
     else if (input->AST_type == FUNCPROTO) return FuncCallGen(input);
     else if (input->AST_type == EXP) {
@@ -326,4 +346,9 @@ GlobalVariable *gen::createGlob(Type *type, const std::string& name) {
 AllocaInst *gen::createBlockAlloca(BasicBlock &block, const string &VarName, type VarType) {
     IRBuilder<> TmpB(&block, block.begin());
     return TmpB.CreateAlloca(GetFuncType(VarType), nullptr, VarName);
+}
+
+AllocaInst *gen::createBlockAlloca(BasicBlock &block, const string &VarName, type VarType, Value* ArraySize) {
+    IRBuilder<> TmpB(&block, block.begin());
+    return TmpB.CreateAlloca(GetFuncType(VarType), ArraySize, VarName);
 }

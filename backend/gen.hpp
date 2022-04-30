@@ -51,10 +51,14 @@ private:
     BasicBlock *createBB(Function *fooFunc, const std::string& Name);
     GlobalVariable *createGlob(Type *type, const std::string& name);
     AllocaInst *createBlockAlloca(BasicBlock &block, const string &VarName, type VarType);
+    AllocaInst *createBlockAlloca(BasicBlock &block, const string &VarName, type VarType, Value* ArraySize);
     Value *IntToFloat(Value *input);
     Value *FloatToInt(Value *InitVal);
     Value *LoadValue(const string &temp_name);
 
+    Value *FuncCallGen(unique_ptr<BaseAST> &input);
+    void OutputGen();
+    void InitExternalFunction();
     Value *ValueGen(unique_ptr<BaseAST> &input);
     Value *ConditionGen(unique_ptr<BaseAST> &input);
     Type *GetFuncType(type FuncType);
@@ -68,12 +72,6 @@ private:
 public:
     explicit gen(const string& name);
     void ProgramGen(unique_ptr<CompUnit> &program);
-
-    void OutputGen();
-
-    void InitExternalFunction();
-
-    Value *FuncCallGen(unique_ptr<BaseAST> &input);
 };
 
 
