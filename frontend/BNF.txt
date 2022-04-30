@@ -7,17 +7,17 @@ CompUnit      ::= [CompUnit] (Decl | FuncDef);
 Decl          ::= ConstDecl | VarDecl;
 ConstDecl     ::= "const" BType ConstDef {"," ConstDef} ";";
 BType         ::= "int" | "float";
-ConstDef      ::= IDENT {"[" ConstExp "]"} "=" ConstInitVal;
-ConstInitVal  ::= ConstExp | "{" [ConstInitVal {"," ConstInitVal}] "}";
+ConstDef      ::= IDENT {"[" Exp "]"} "=" ConstInitVal;
+ConstInitVal  ::= Exp | "{" [ConstInitVal {"," ConstInitVal}] "}";
 VarDecl       ::= BType VarDef {"," VarDef} ";";
-VarDef        ::= IDENT {"[" ConstExp "]"}
-                | IDENT {"[" ConstExp "]"} "=" InitVal;
+VarDef        ::= IDENT {"[" Exp "]"}
+                | IDENT {"[" Exp "]"} "=" InitVal;
 InitVal       ::= Exp | "{" [InitVal {"," InitVal}] "}";
 
 FuncDef       ::= FuncType IDENT "(" [FuncFParams] ")" Block;
 FuncType      ::= "void" | "int" | "float";
 FuncFParams   ::= FuncFParam {"," FuncFParam};
-FuncFParam    ::= BType IDENT ["[" "]" {"[" ConstExp "]"}];
+FuncFParam    ::= BType IDENT ["[" "]" {"[" Exp "]"}];
 
 Block         ::= "{" {BlockItem} "}";
 BlockItem     ::= Decl | Stmt;
@@ -44,4 +44,3 @@ RelExp        ::= AddExp | RelExp ("<" | ">" | "<=" | ">=") AddExp;
 EqExp         ::= RelExp | EqExp ("==" | "!=") RelExp;
 LAndExp       ::= EqExp | LAndExp "&&" EqExp;
 LOrExp        ::= LAndExp | LOrExp "||" LAndExp;
-ConstExp      ::= AddExp;
