@@ -19,3 +19,9 @@ Then use clang to generate the executable file.
 ```shell
 clang-14 output.o ../library/sylib.a -o program
 ```
+
+## Generate static library
+```shell
+clang-14 -c sylib.c -o sylib
+ar cr sylib.a sylib
+```
