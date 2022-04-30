@@ -5,7 +5,8 @@
 #include "ast.hpp"
 
 void Decl::print(int indent) const {
-    cout << Name << "\t" << Var_name << "\t";
+    cout << Name << "\t";
+    Var->print(indent);
     print_type(Decl_type);
     if (this->Exp != nullptr) {
         cout << endl;
@@ -85,6 +86,7 @@ void CompUnit::print(int indent) const {
 }
 
 void Variable::print(int indent) const {
+    // TODO: add array
     cout << "Var\t" <<  Var_name;
 }
 

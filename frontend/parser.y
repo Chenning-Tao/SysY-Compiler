@@ -40,7 +40,7 @@ extern int yylineno;
 %token <float_val> FLOAT_CONST
 
 // none terminal type
-%type <ast_val> FuncRParams LVal LOrExp LAndExp EqExp RelExp Cond AddExp MulExp PrimaryExp UnaryExp Exp FuncDef FuncType Block Stmt Decl CompUnit ConstDecl VarDecl BType ConstDef ConstExp BlockItem_Wrap BlockItem VarDef Number InitVal
+%type <ast_val> Exp_Wrap FuncRParams LVal LOrExp LAndExp EqExp RelExp Cond AddExp MulExp PrimaryExp UnaryExp Exp FuncDef FuncType Block Stmt Decl CompUnit ConstDecl VarDecl BType ConstDef ConstExp BlockItem_Wrap BlockItem VarDef Number InitVal
 
 %%
 
@@ -57,8 +57,6 @@ CompUnit
 		auto decl = new CompUnit();
 		decl->Name = "CompUnits";
 		decl->AST_type = COMPUNIT;
-		$1->Name = "DeclStmt";
-		$1->AST_type = DECL;
 		decl->CompUnits.push_back(unique_ptr<BaseAST>($1));
 		ast = unique_ptr<CompUnit>(decl);
 		$$ = decl;
@@ -67,8 +65,6 @@ CompUnit
 		auto comp_unit = new CompUnit();
 		comp_unit->Name = "CompUnits";
 		comp_unit->AST_type = COMPUNIT;
-		$2->AST_type = DECL;
-		$2->Name = "DeclStmt";
 		comp_unit->CompUnits = move(reinterpret_cast<CompUnit*>$1->CompUnits);
 		comp_unit->CompUnits.push_back(unique_ptr<BaseAST>($2));
 		ast = unique_ptr<CompUnit>(comp_unit);
@@ -145,14 +141,20 @@ VarDef
 	: INT IDENT { 
 		auto ast = new Decl();
 		ast->Decl_type = Int;
-		ast->Var_name = *unique_ptr<string>($2);
+		auto var_ast = new Variable();
+		var_ast->Var_name = *unique_ptr<string>($2);
+		var_ast->Length = vector<unique_ptr<BaseAST>>();
+		ast->Var = unique_ptr<BaseAST>(var_ast);
 		ast->Exp = nullptr;
 		$$ = ast;
 	}
 	| INT IDENT '=' InitVal { 
 		auto ast = new Decl();
 		ast->Decl_type = Int;
-		ast->Var_name = *unique_ptr<string>($2);
+		auto var_ast = new Variable();
+		var_ast->Var_name = *unique_ptr<string>($2);
+		var_ast->Length = vector<unique_ptr<BaseAST>>();
+		ast->Var = unique_ptr<BaseAST>(var_ast);
 		ast->Exp = unique_ptr<BaseAST>($4);
 		$$ = ast;
 	}
@@ -161,14 +163,20 @@ VarDef
 	| FLOAT IDENT { 
 		auto ast = new Decl();
 		ast->Decl_type = Float;
-		ast->Var_name = *unique_ptr<string>($2);
+		auto var_ast = new Variable();
+		var_ast->Var_name = *unique_ptr<string>($2);
+		var_ast->Length = vector<unique_ptr<BaseAST>>();
+		ast->Var = unique_ptr<BaseAST>(var_ast);
 		ast->Exp = nullptr;
 		$$ = ast;
 	}
 	| FLOAT IDENT '=' InitVal { 
 		auto ast = new Decl();
 		ast->Decl_type = Float;
-		ast->Var_name = *unique_ptr<string>($2);
+		auto var_ast = new Variable();
+		var_ast->Var_name = *unique_ptr<string>($2);
+		var_ast->Length = vector<unique_ptr<BaseAST>>();
+		ast->Var = unique_ptr<BaseAST>(var_ast);
 		ast->Exp = unique_ptr<BaseAST>($4);
 		$$ = ast;
 	}
@@ -244,7 +252,11 @@ FuncFParam
 
 // TODO: add rule for array
 Exp_Wrap
-	: '[' Exp ']' { }
+	: '[' Exp ']' { 
+		auto ast = new Variable();
+		ast->Length.push_back(unique_ptr<BaseAST>($2));
+		$$ = ast;
+	}
 	| '[' Exp ']' Exp_Wrap { }
 	;
 
@@ -323,6 +335,7 @@ LVal
 		auto ast = new Variable();
 		ast->AST_type = VARIABLE;
 		ast->Var_name = *unique_ptr<string>($1);
+		ast->Length = vector<unique_ptr<BaseAST>>();
 		$$ = ast;
 	}
 	| IDENT Exp_Wrap { }

@@ -66,7 +66,7 @@ class Decl : public BaseAST {
 public:
     bool Const;
     type Decl_type;
-    string Var_name;
+    unique_ptr<BaseAST> Var;
     unique_ptr<BaseAST> Exp;
 
     void print(int indent) const override;
@@ -105,9 +105,12 @@ public:
     void print(int indent) const override;
 };
 
+// class for variable and array (e.g. a, a[0])
 class Variable : public BaseAST {
 public:
     string Var_name;
+    // if not empty, indicates that this is an array
+    vector<unique_ptr<BaseAST>> Length;
 
     void print(int indent) const override;
 };

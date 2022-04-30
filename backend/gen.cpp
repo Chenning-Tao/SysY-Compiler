@@ -85,13 +85,15 @@ void gen::OutputGen() {
 void gen::GlobalVarGen(unique_ptr<BaseAST> &Unit) {
     unique_ptr<Decl> global(reinterpret_cast<Decl*>(Unit.release()));
     // determine whether it has been declared
-    if (GlobalValues.find(global->Var_name) == GlobalValues.end()) {
-        GlobalVariable *gVar = createGlob(GetFuncType(global->Decl_type), global->Var_name);
+    // TODO: add array
+    unique_ptr<Variable> var(reinterpret_cast<Variable*>(global->Var.release()));
+    if (GlobalValues.find(var->Var_name) == GlobalValues.end()) {
+        GlobalVariable *gVar = createGlob(GetFuncType(global->Decl_type), var->Var_name);
         if (global->Exp != nullptr)
             gVar->setInitializer(dyn_cast<Constant>(ValueGen(global->Exp)));
-        GlobalValues.emplace(global->Var_name, gVar);
+        GlobalValues.emplace(var->Var_name, gVar);
     }
-    else cout << "error: redefinition of '"<< global->Var_name << "'" << endl;
+    else cout << "error: redefinition of '"<< var->Var_name << "'" << endl;
 }
 
 void gen::FuncGen(unique_ptr<BaseAST> &Unit) {
@@ -117,12 +119,14 @@ void gen::FuncGen(unique_ptr<BaseAST> &Unit) {
 }
 
 void gen::DeclGen(unique_ptr<BaseAST> &Block, vector<std::string> &removeList) {
+    // TODO: add array
     unique_ptr<Decl> DeclUnit(reinterpret_cast<Decl*>(Block.release()));
+    unique_ptr<Variable> VarUnit(reinterpret_cast<Variable*>(DeclUnit->Var.release()));
     auto *cur = GenBuilder->GetInsertBlock();
     // check redefinition
-    auto check_sym = find(removeList.begin(), removeList.end(), DeclUnit->Var_name);
+    auto check_sym = find(removeList.begin(), removeList.end(), VarUnit->Var_name);
     if (check_sym != removeList.end()) {
-        cout << "error: redefinition of '"<< DeclUnit->Var_name << "'" << endl;
+        cout << "error: redefinition of '"<< VarUnit->Var_name << "'" << endl;
         exit(0);
     }
     Value *InitVal = nullptr;
@@ -132,11 +136,11 @@ void gen::DeclGen(unique_ptr<BaseAST> &Block, vector<std::string> &removeList) {
             InitVal = IntToFloat(InitVal);
     }
     // create IR
-    AllocaInst *Alloca = createBlockAlloca(*cur, DeclUnit->Var_name, DeclUnit->Decl_type);
+    AllocaInst *Alloca = createBlockAlloca(*cur, VarUnit->Var_name, DeclUnit->Decl_type);
     if (InitVal != nullptr) GenBuilder->CreateStore(InitVal, Alloca);
     // add to symbol table
-    NamedValues.insert(DeclUnit->Var_name, Alloca);
-    removeList.push_back(DeclUnit->Var_name);
+    NamedValues.insert(VarUnit->Var_name, Alloca);
+    removeList.push_back(VarUnit->Var_name);
 }
 
 void gen::StmtGen(Function *F, unique_ptr<BaseAST> &Block) {
