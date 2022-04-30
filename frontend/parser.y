@@ -40,7 +40,7 @@ extern int yylineno;
 %token <float_val> FLOAT_CONST
 
 // none terminal type
-%type <ast_val> Exp_Wrap FuncRParams LVal LOrExp LAndExp EqExp RelExp Cond AddExp MulExp PrimaryExp UnaryExp Exp FuncDef FuncType Block Stmt Decl CompUnit ConstDecl VarDecl BType ConstDef ConstExp BlockItem_Wrap BlockItem VarDef Number InitVal
+%type <ast_val> ConstExp_Wrap Exp_Wrap FuncRParams LVal LOrExp LAndExp EqExp RelExp Cond AddExp MulExp PrimaryExp UnaryExp Exp FuncDef FuncType Block Stmt Decl CompUnit ConstDecl VarDecl BType ConstDef ConstExp BlockItem_Wrap BlockItem VarDef Number InitVal
 
 %%
 
@@ -117,8 +117,17 @@ ConstDef
 	;
 
 ConstExp_Wrap
-	: '[' ConstExp ']' { }
-	| '[' ConstExp ']' ConstExp_Wrap { }
+	: '[' ConstExp ']' { 
+		auto ast = new Variable();
+		ast->Length = vector<unique_ptr<BaseAST>>();
+		ast->Length.push_back(unique_ptr<BaseAST>($2));
+		$$ = ast;
+	}
+	| '[' ConstExp ']' ConstExp_Wrap { 
+		auto ast = reinterpret_cast<Variable*>$4;
+		ast->Length.insert(ast->Length.begin(), unique_ptr<BaseAST>($2));
+		$$ = move(ast);
+	}
 	;
 
 ConstInitVal
@@ -158,7 +167,16 @@ VarDef
 		ast->Exp = unique_ptr<BaseAST>($4);
 		$$ = ast;
 	}
-	| INT IDENT ConstExp_Wrap { }
+	| INT IDENT ConstExp_Wrap { 
+		auto ast = new Decl();
+		ast->Decl_type = Int;
+		auto var_ast = new Variable();
+		var_ast->Var_name = *unique_ptr<string>($2);
+		var_ast->Length = move(reinterpret_cast<Variable*>$3->Length);
+		ast->Var = unique_ptr<BaseAST>(var_ast);
+		ast->Exp = nullptr;
+		$$ = ast;
+	}
 	| INT IDENT ConstExp_Wrap '=' InitVal { }
 	| FLOAT IDENT { 
 		auto ast = new Decl();
@@ -180,7 +198,16 @@ VarDef
 		ast->Exp = unique_ptr<BaseAST>($4);
 		$$ = ast;
 	}
-	| FLOAT IDENT ConstExp_Wrap { }
+	| FLOAT IDENT ConstExp_Wrap { 
+		auto ast = new Decl();
+		ast->Decl_type = Float;
+		auto var_ast = new Variable();
+		var_ast->Var_name = *unique_ptr<string>($2);
+		var_ast->Length = move(reinterpret_cast<Variable*>$3->Length);
+		ast->Var = unique_ptr<BaseAST>(var_ast);
+		ast->Exp = nullptr;
+		$$ = ast;
+	}
 	| FLOAT IDENT ConstExp_Wrap '=' InitVal { }
 	;
 
@@ -476,7 +503,7 @@ LOrExp
 	;
 
 ConstExp
-	: AddExp { }
+	: AddExp { $$ = $1; }
 	;
 
 %%

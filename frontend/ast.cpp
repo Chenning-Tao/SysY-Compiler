@@ -6,8 +6,9 @@
 
 void Decl::print(int indent) const {
     cout << Name << "\t";
-    Var->print(indent);
     print_type(Decl_type);
+    cout << "\t";
+    Var->print(indent);
     if (this->Exp != nullptr) {
         cout << endl;
         print_indent(++indent);
@@ -86,8 +87,16 @@ void CompUnit::print(int indent) const {
 }
 
 void Variable::print(int indent) const {
-    // TODO: add array
-    cout << "Var\t" <<  Var_name;
+    if (Length.empty()) cout << "Var\t" <<  Var_name;
+    else {
+        cout << "Array\t" << Var_name << endl;
+        for(const auto & i : Length){
+            print_indent(++indent);
+            i->print(indent);
+            cout << endl;
+            --indent;
+        }
+    }
 }
 
 void FuncPrototype::print(int indent) const {
