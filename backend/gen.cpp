@@ -6,7 +6,7 @@
 
 using namespace llvm;
 
-void gen::ProgramGen(unique_ptr<CompUnit> &program) {
+void gen::ProgramGen(unique_ptr<CompUnit> &program) {\
     // init external function
     InitExternalFunction();
     for (auto & Unit : program->CompUnits) {
@@ -19,12 +19,26 @@ void gen::ProgramGen(unique_ptr<CompUnit> &program) {
 
 void gen::InitExternalFunction() {
     // int getint()
-    FunctionType *getintTy = FunctionType::get(GetFuncType(Int), false);
+    FunctionType *getintTy = FunctionType::get(GetType(Int), false);
     Function *getint = Function::Create(getintTy, Function::ExternalLinkage, "getint", GenModule.get());
     // void putint(a)
-    std::vector<Type *> putintParas(1, GetFuncType(Int));
-    FunctionType *putintTy = FunctionType::get(GetFuncType(Void), putintParas, false);
+    std::vector<Type *> putintParas(1, GetType(Int));
+    FunctionType *putintTy = FunctionType::get(GetType(Void), putintParas, false);
     Function *putint = Function::Create(putintTy, Function::ExternalLinkage, "putint", GenModule.get());
+    // int getch()
+    FunctionType *getchTy = FunctionType::get(GetType(Int), false);
+    Function *getch = Function::Create(getchTy, Function::ExternalLinkage, "getch", GenModule.get());
+    // int getfloat()
+    FunctionType *getfloatTy = FunctionType::get(GetType(Float), false);
+    Function *getfloat = Function::Create(getfloatTy, Function::ExternalLinkage, "getfloat", GenModule.get());
+    // void putch(a)
+    std::vector<Type *> putchParas(1, GetType(Int));
+    FunctionType *putchTy = FunctionType::get(GetType(Void), putchParas, false);
+    Function *putch = Function::Create(putchTy, Function::ExternalLinkage, "putch", GenModule.get());
+    // void putfloat(a)
+    std::vector<Type *> putfloatParas(1, GetType(Float));
+    FunctionType *putfloatTy = FunctionType::get(GetType(Void), putfloatParas, false);
+    Function *putfloat = Function::Create(putfloatTy, Function::ExternalLinkage, "putfloat", GenModule.get());
 }
 
 void gen::OutputGen() {
@@ -88,7 +102,7 @@ void gen::GlobalVarGen(unique_ptr<BaseAST> &Unit) {
     // TODO: add array
     unique_ptr<Variable> var(reinterpret_cast<Variable*>(global->Var.release()));
     if (GlobalValues.find(var->Var_name) == GlobalValues.end()) {
-        GlobalVariable *gVar = createGlob(GetFuncType(global->Decl_type), var->Var_name);
+        GlobalVariable *gVar = createGlob(GetType(global->Decl_type), var->Var_name);
         if (global->Exp != nullptr)
             gVar->setInitializer(dyn_cast<Constant>(ValueGen(global->Exp)));
         GlobalValues.emplace(var->Var_name, gVar);
@@ -98,17 +112,43 @@ void gen::GlobalVarGen(unique_ptr<BaseAST> &Unit) {
 
 void gen::FuncGen(unique_ptr<BaseAST> &Unit) {
     unique_ptr<Func> FuncUnit(reinterpret_cast<Func*>(Unit.release()));
+    unique_ptr<FuncPrototype> Proto(reinterpret_cast<FuncPrototype*>(FuncUnit->Prototype.release()));
     // Parameters
     vector<Type*> Para{};
+    vector<std::string> ParaNames{};
+    vector<int> ParaDim{};
+    vector<type> ParaType{};
+    for (auto & Param : Proto->Params){
+        unique_ptr<Decl> decl(reinterpret_cast<Decl*>(Param.release()));
+        unique_ptr<Variable> var(reinterpret_cast<Variable*>(decl->Var.release()));
+        ParaNames.push_back(var->Var_name);
+        if (var->Length.empty()) Para.push_back(GetType(decl->Decl_type));
+        else Para.push_back(GetPtrType(decl->Decl_type));
+        ParaDim.push_back(var->Length.size());
+        ParaType.push_back(decl->Decl_type);
+    }
 
     // Function
-    unique_ptr<FuncPrototype> Proto(reinterpret_cast<FuncPrototype*>(FuncUnit->Prototype.release()));
-    FunctionType *FT = FunctionType::get(GetFuncType(Proto->Func_type), Para, false);
+    FunctionType *FT = FunctionType::get(GetType(Proto->Func_type), Para, false);
     Function *F = Function::Create(FT, Function::ExternalLinkage, Proto->Func_name, GenModule.get());
 
     // create block
     BasicBlock *BB = createBB(F, Proto->Func_name);
     GenBuilder->SetInsertPoint(BB);
+
+    // init symbol table
+    auto *cur = GenBuilder->GetInsertBlock();
+    int i = 0;
+    for(auto &Arg : F->args()) {
+        Value *a = &Arg;
+        AllocaInst *Alloca;
+        if (ParaDim[i] == 0) Alloca = createBlockAlloca(*cur, ParaNames[i], ParaType[i]);
+        else Alloca = createBlockPtrAlloca(*cur, ParaNames[i], ParaType[i]);
+        NamedValues.insert(ParaNames[i], Alloca, ParaDim[i]);
+        GenBuilder->CreateStore(a, Alloca);
+        ++i;
+    }
+
     std::vector<std::string> removeList;
     for (auto & Block : FuncUnit->Blocks){
         if (Block->AST_type == STMT) StmtGen(F, Block);
@@ -119,7 +159,6 @@ void gen::FuncGen(unique_ptr<BaseAST> &Unit) {
 }
 
 void gen::DeclGen(unique_ptr<BaseAST> &Block, vector<std::string> &removeList) {
-    // TODO: add array
     unique_ptr<Decl> DeclUnit(reinterpret_cast<Decl*>(Block.release()));
     unique_ptr<Variable> VarUnit(reinterpret_cast<Variable*>(DeclUnit->Var.release()));
     auto *cur = GenBuilder->GetInsertBlock();
@@ -139,12 +178,13 @@ void gen::DeclGen(unique_ptr<BaseAST> &Block, vector<std::string> &removeList) {
     AllocaInst *Alloca;
     if (VarUnit->Length.empty()) Alloca = createBlockAlloca(*cur, VarUnit->Var_name, DeclUnit->Decl_type);
     else {
+        // TODO: add multi dim array
         Value *arraySize = ValueGen(VarUnit->Length[0]);
         Alloca = createBlockAlloca(*cur, VarUnit->Var_name, DeclUnit->Decl_type, arraySize);
     }
     if (InitVal != nullptr) GenBuilder->CreateStore(InitVal, Alloca);
     // add to symbol table
-    NamedValues.insert(VarUnit->Var_name, Alloca);
+    NamedValues.insert(VarUnit->Var_name, Alloca, VarUnit->Length.size());
     removeList.push_back(VarUnit->Var_name);
 }
 
@@ -175,9 +215,22 @@ void gen::AssignGen(unique_ptr<Stmt> &StmtUnit) {
     if (VarUnit->Length.empty()) GenBuilder->CreateStore(right, var);
     else {
         // if is array
-        Value *location = GenBuilder->CreateGEP(var->getAllocatedType(), var, ValueGen(VarUnit->Length[0]));
+        Value *location = GetLocation(VarUnit, var);
         GenBuilder->CreateStore(right, location);
     }
+}
+
+Value *gen::GetLocation(const unique_ptr<Variable> &VarUnit, AllocaInst *var) {
+    Value *location;
+    if (var->getAllocatedType()->isPointerTy()){
+        Value *st = GenBuilder->CreateLoad(var->getAllocatedType(), var, var->getName().data());
+        if (var->getAllocatedType() == GetPtrType(Int))
+            location = GenBuilder->CreateGEP(GetType(Int), st, ValueGen(VarUnit->Length[0]));
+        else
+            location = GenBuilder->CreateGEP(GetType(Float), st, ValueGen(VarUnit->Length[0]));
+    }
+    else location = GenBuilder->CreateGEP(var->getAllocatedType(), var, ValueGen(VarUnit->Length[0]));
+    return location;
 }
 
 void gen::IfGen(Function *F, unique_ptr<Stmt> &StmtUnit) {
@@ -223,7 +276,7 @@ gen::gen(const string& name) {
     GenBuilder = std::make_unique<IRBuilder<>>(*GenContext);
 }
 
-Type *gen::GetFuncType(type FuncType) {
+Type *gen::GetType(type FuncType) {
     switch (FuncType) {
         case Int:
             return Type::getInt32Ty(*GenContext);
@@ -270,8 +323,9 @@ Value *gen::ValueGen(unique_ptr<BaseAST> &input) {
         if (variable->Length.empty())
             return GenBuilder->CreateLoad(var->getAllocatedType(), var, var->getName().data());
         else {
-            Value *location = GenBuilder->CreateGEP(var->getAllocatedType(), var, ValueGen(variable->Length[0]));
-            return GenBuilder->CreateLoad(GetFuncType(Int), location, var->getName().data());
+            Value *location = GetLocation(variable, var);
+            type re = GetFuncType(var);
+            return GenBuilder->CreateLoad(GetType(re), location, var->getName().data());
         }
     }
     else if (input->AST_type == FUNCPROTO) return FuncCallGen(input);
@@ -304,6 +358,20 @@ Value *gen::ValueGen(unique_ptr<BaseAST> &input) {
     }
 }
 
+type gen::GetFuncType(const AllocaInst *var) {
+    type re;
+    if (var->getAllocatedType()->isPointerTy()){
+        if (var->getAllocatedType() == GetPtrType(Int))
+            re = Int;
+        else re = Float;
+    }else {
+        if (var->getAllocatedType() == GetType(Int))
+            re = Int;
+        else re = Float;
+    }
+    return re;
+}
+
 Value *gen::FuncCallGen(unique_ptr<BaseAST> &input) {
     unique_ptr<FuncPrototype> prototype(reinterpret_cast<FuncPrototype*>(input.release()));
     Function *CalleeF = GenModule->getFunction(prototype->Func_name);
@@ -313,19 +381,21 @@ Value *gen::FuncCallGen(unique_ptr<BaseAST> &input) {
     }
     vector<Value*> ArgsV{};
     if (!prototype->Params.empty()){
-        for(auto & Param : prototype->Params)
-            ArgsV.push_back(ValueGen(Param));
+        for(auto & Param : prototype->Params){
+            if (Param->AST_type == VARIABLE){
+                unique_ptr<Variable> VarUnit(reinterpret_cast<Variable*>(Param.release()));
+                AllocaInst *var = NamedValues.find(VarUnit->Var_name);
+                int dim = NamedValues.array_dim(VarUnit->Var_name);
+                if (dim > 0 && VarUnit->Length.empty())
+                    ArgsV.push_back(GenBuilder->CreateGEP(var->getAllocatedType(), var, ConstantInt::get(*GenContext, APInt(32, 0))));
+                else{
+                    unique_ptr<BaseAST> te(reinterpret_cast<BaseAST*>(VarUnit.release()));
+                    ArgsV.push_back(ValueGen(te));
+                }
+            }
+        }
     }
     return GenBuilder->CreateCall(CalleeF, ArgsV, "calltmp");
-}
-
-Value *gen::LoadValue(const string &temp_name) {// check symbol table
-    AllocaInst *var = NamedValues.find(temp_name);
-    if (var == nullptr) {
-        cout << "error: use of undeclared identifier '" << temp_name << "'" << endl;
-        exit(0);
-    }
-    return GenBuilder->CreateLoad(var->getAllocatedType(), var, var->getName().data());
 }
 
 bool gen::FloatGen(Value *&L, Value *&R) {
@@ -345,10 +415,24 @@ GlobalVariable *gen::createGlob(Type *type, const std::string& name) {
 
 AllocaInst *gen::createBlockAlloca(BasicBlock &block, const string &VarName, type VarType) {
     IRBuilder<> TmpB(&block, block.begin());
-    return TmpB.CreateAlloca(GetFuncType(VarType), nullptr, VarName);
+    return TmpB.CreateAlloca(GetType(VarType), nullptr, VarName);
+}
+
+AllocaInst *gen::createBlockPtrAlloca(BasicBlock &block, const string &VarName, type VarType) {
+    IRBuilder<> TmpB(&block, block.begin());
+    return TmpB.CreateAlloca(GetPtrType(VarType), nullptr, VarName);
 }
 
 AllocaInst *gen::createBlockAlloca(BasicBlock &block, const string &VarName, type VarType, Value* ArraySize) {
     IRBuilder<> TmpB(&block, block.begin());
-    return TmpB.CreateAlloca(GetFuncType(VarType), ArraySize, VarName);
+    return TmpB.CreateAlloca(GetType(VarType), ArraySize, VarName);
+}
+
+Type *gen::GetPtrType(type FuncType) {
+    switch (FuncType) {
+        case Int:
+            return Type::getInt32PtrTy(*GenContext);
+        case Float:
+            return Type::getFloatPtrTy(*GenContext);
+    }
 }

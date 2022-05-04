@@ -52,14 +52,18 @@ void Stmt::print(int indent) const {
 }
 
 void Exp::print(int indent) const {
-    if (Operator.empty()) Left_exp->print(indent);
+    // TODO: used for func para, find a better way
+    if (Name == "fake") cout << "[" "]";
     else {
-        cout << Name << "\t" << Operator << endl;
-        print_indent(++indent);
-        Left_exp->print(indent);
-        cout << endl;
-        print_indent(indent);
-        Right_exp->print(indent);
+        if (Operator.empty()) Left_exp->print(indent);
+        else {
+            cout << Name << "\t" << Operator << endl;
+            print_indent(++indent);
+            Left_exp->print(indent);
+            cout << endl;
+            print_indent(indent);
+            Right_exp->print(indent);
+        }
     }
 }
 
