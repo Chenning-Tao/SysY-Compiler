@@ -4,16 +4,25 @@
 
 #include "symbolTable.hpp"
 
-void symbolTable::insert(const std::string& name, AllocaInst *input) {
+void symbolTable::insert(const std::string& name, AllocaInst *input, int dim) {
     auto re = table.find(name);
+    auto ar = array.find(name);
     // if not in symbol table
     if(re == table.end()){
+        // add variable
         auto new_stack = std::stack<AllocaInst*>();
         new_stack.push(input);
         table.emplace(name, new_stack);
+        // add array length
+        auto array_stack = std::stack<int>();
+        array_stack.push(dim);
+        array.emplace(name, array_stack);
     }
     // already have definition in symbol table
-    else re->second.push(input);
+    else {
+        re->second.push(input);
+        ar->second.push(dim);
+    }
 }
 
 void symbolTable::remove(const std::vector<std::string>& name) {
@@ -29,5 +38,11 @@ void symbolTable::remove(const std::vector<std::string>& name) {
 AllocaInst *symbolTable::find(const std::string& name) {
     auto re = table.find(name);
     if (re == table.end()) return nullptr;
+    return re->second.top();
+}
+
+int symbolTable::array_dim(const std::string &name) {
+    auto re = array.find(name);
+    if (re == array.end()) return -1;
     return re->second.top();
 }
