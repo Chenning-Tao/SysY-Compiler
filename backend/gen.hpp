@@ -67,6 +67,8 @@ private:
     bool FloatGen(Value *&L, Value *&R);
     void AssignGen(unique_ptr<Stmt> &StmtUnit);
     void IfGen(Function *F, unique_ptr<Stmt> &StmtUnit);
+    //WhileGen
+    void WhileGen(Function *F, unique_ptr<Stmt> &StmtUnit);
     void GlobalVarGen(unique_ptr<BaseAST> &Unit);
     void DeclGen(unique_ptr<BaseAST> &Block, vector<std::string> &removeList);
     void FuncGen(unique_ptr<BaseAST> &Unit);

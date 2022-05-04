@@ -191,6 +191,7 @@ void gen::DeclGen(unique_ptr<BaseAST> &Block, vector<std::string> &removeList) {
 void gen::StmtGen(Function *F, unique_ptr<BaseAST> &Block) {
     unique_ptr<Stmt> StmtUnit(reinterpret_cast<Stmt*>(Block.release()));
     if (StmtUnit->Stmt_type == If) IfGen(F, StmtUnit);
+    else if (StmtUnit->Stmt_type == While) WhileGen(F, StmtUnit);
     else if(StmtUnit->Stmt_type == Assign) AssignGen(StmtUnit);
     else if(StmtUnit->Stmt_type == Return){
         if(StmtUnit->RVal == nullptr) GenBuilder->CreateRetVoid();
@@ -255,6 +256,38 @@ void gen::IfGen(Function *F, unique_ptr<Stmt> &StmtUnit) {
     // condition = false
     GenBuilder->SetInsertPoint(ElseBB);
     GenBuilder->CreateBr(MergeBB);
+
+    // merge
+//    PHINode *Phi = GenBuilder->CreatePHI()
+}
+
+// While CodeGen
+void gen::WhileGen(Function *F, unique_ptr<Stmt> &StmtUnit) {
+    
+    // BasicBlock *entryBB = createBB(fooFunc, "entry");
+    BasicBlock *loopBB = createBB(F, "loop");
+    // BasicBlock *endEntryBB = createBB(F, "endEntry");
+    BasicBlock *endLoopBB = createBB(F, "endLoop");
+    // condition generation
+    Value *EndCond = ConditionGen(StmtUnit->Condition);
+    // 根据EndCond判断是否跳转
+    GenBuilder->CreateCondBr(EndCond, loopBB, endLoopBB);
+
+    // condition = true -> loopBB
+    GenBuilder->SetInsertPoint(loopBB);
+    std::vector<std::string> removeList;
+    for(auto &true_block : StmtUnit->First_block){
+        if(true_block->AST_type == DECL) DeclGen(true_block, removeList);
+        else if(true_block->AST_type == STMT) StmtGen(F, true_block);
+    }
+    NamedValues.remove(removeList);
+    // 根据EndCond判断是否跳转
+    GenBuilder->CreateCondBr(EndCond, loopBB, endLoopBB);
+    
+    
+    // condition = false -> endLoopBB
+    GenBuilder->SetInsertPoint(endLoopBB);
+
 
     // merge
 //    PHINode *Phi = GenBuilder->CreatePHI()
