@@ -40,7 +40,7 @@ extern int yylineno;
 %token <float_val> FLOAT_CONST
 
 // none terminal type
-%type <ast_val> Exp_Wrap FuncRParams LVal LOrExp LAndExp EqExp RelExp Cond AddExp MulExp PrimaryExp UnaryExp Exp FuncDef FuncType Block Stmt Decl CompUnit ConstDecl VarDecl BType ConstDef BlockItem_Wrap BlockItem VarDef Number InitVal
+%type <ast_val> FuncFParams FuncFParam Exp_Wrap FuncRParams LVal LOrExp LAndExp EqExp RelExp Cond AddExp MulExp PrimaryExp UnaryExp Exp FuncDef FuncType Block Stmt Decl CompUnit ConstDecl VarDecl BType ConstDef BlockItem_Wrap BlockItem VarDef Number InitVal
 
 %%
 
@@ -210,7 +210,6 @@ InitVal_Wrap
 	| ',' InitVal InitVal_Wrap { }
 	;
 
-// TODO: add rule to pass function parameters
 FuncDef
 	: FuncType '(' ')' Block {
 		auto ast = new Func();
@@ -220,7 +219,16 @@ FuncDef
 		ast->Blocks = move(reinterpret_cast<Func*>$4->Blocks);
 		$$ = ast;
 	}
-	| FuncType '(' FuncFParams ')' Block { }
+	| FuncType '(' FuncFParams ')' Block { 
+		auto ast = new Func();
+		ast->Name = "FuncDef";
+		ast->AST_type = FUNC;
+		auto func_prototype = move(reinterpret_cast<FuncPrototype*>$1);
+		func_prototype->Params = move(reinterpret_cast<FuncPrototype*>$3->Params);
+		ast->Prototype = unique_ptr<BaseAST>(func_prototype);
+		ast->Blocks = move(reinterpret_cast<Func*>$5->Blocks);
+		$$ = ast;
+	}
 	;
 
 FuncType
@@ -248,7 +256,7 @@ FuncType
 	;
 
 FuncFParams
-	: FuncFParam { }
+	: FuncFParam { $$ = $1; }
 	| FuncFParam FuncFParams_Wrap { }
 	;
 
@@ -258,8 +266,36 @@ FuncFParams_Wrap
 	;
 
 FuncFParam
-	: BType IDENT { }
-	| BType IDENT '[' ']' { }
+	: BType IDENT { 
+		auto ast = new FuncPrototype();
+		auto decl = new Decl();
+		decl->Decl_type = reinterpret_cast<Decl*>$1->Decl_type;
+		auto var_ast = new Variable();
+		var_ast->Var_name = *unique_ptr<string>($2);
+		var_ast->Length = vector<unique_ptr<BaseAST>>();
+		decl->Var = unique_ptr<BaseAST>(var_ast);
+		decl->Exp = nullptr;
+		ast->Params = vector<unique_ptr<BaseAST>>();
+		ast->Params.push_back(unique_ptr<BaseAST>(decl));
+		$$ = ast;
+	}
+	| BType IDENT '[' ']' { 
+		auto ast = new FuncPrototype();
+		auto decl = new Decl();
+		decl->Decl_type = reinterpret_cast<Decl*>$1->Decl_type;
+		auto var_ast = new Variable();
+		var_ast->Var_name = *unique_ptr<string>($2);
+		var_ast->Length = vector<unique_ptr<BaseAST>>();
+		auto fake_exp = new Exp();
+		fake_exp->AST_type = EXP;
+		fake_exp->Name = "fake";
+		var_ast->Length.push_back(unique_ptr<BaseAST>(fake_exp));
+		decl->Var = unique_ptr<BaseAST>(var_ast);
+		decl->Exp = nullptr;
+		ast->Params = vector<unique_ptr<BaseAST>>();
+		ast->Params.push_back(unique_ptr<BaseAST>(decl));
+		$$ = ast;
+	}
 	| BType IDENT '[' ']' Exp_Wrap { }
 	;
 
