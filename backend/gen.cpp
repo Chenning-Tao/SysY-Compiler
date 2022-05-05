@@ -258,7 +258,8 @@ void gen::IfGen(Function *F, unique_ptr<Stmt> &StmtUnit) {
     GenBuilder->CreateBr(MergeBB);
 
     // merge
-//    PHINode *Phi = GenBuilder->CreatePHI()
+    GenBuilder->SetInsertPoint(MergeBB);
+
 }
 
 // While CodeGen
