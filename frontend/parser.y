@@ -506,7 +506,15 @@ AddExp
 
 RelExp
 	: AddExp { $$ = $1; }
-	| RelExp '<' AddExp { }
+	| RelExp '<' AddExp {
+		auto ast = new Exp();
+		ast->AST_type = EXP;
+		ast->Name = "RelExp";
+		ast->Left_exp = unique_ptr<BaseAST>($1);
+		ast->Operator = "<";
+		ast->Right_exp = unique_ptr<BaseAST>($3);
+		$$ = ast;
+	}
 	| RelExp '>' AddExp { }
 	| RelExp '<' '=' AddExp { }
 	| RelExp '>' '=' AddExp { }

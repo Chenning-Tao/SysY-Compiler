@@ -338,6 +338,10 @@ Value *gen::ConditionGen(unique_ptr<BaseAST> &input) {
         if (is_float) return GenBuilder->CreateFCmpONE(L, R, "ifcond");
         else return GenBuilder->CreateICmpNE(L, R, "ifcond");
     }
+    else if (condition->Operator == "<") {
+        if (is_float) return GenBuilder->CreateFCmpOLT(L, R, "cond");
+        else return GenBuilder->CreateICmpULT(L, R, "cond");
+    }
 }
 
 Value *gen::ValueGen(unique_ptr<BaseAST> &input) {
