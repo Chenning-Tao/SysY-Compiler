@@ -265,16 +265,19 @@ void gen::IfGen(Function *F, unique_ptr<Stmt> &StmtUnit) {
 // While CodeGen
 void gen::WhileGen(Function *F, unique_ptr<Stmt> &StmtUnit) {
     
-    // BasicBlock *entryBB = createBB(fooFunc, "entry");
+    BasicBlock *entryBB = createBB(F, "entry");
     BasicBlock *loopBB = createBB(F, "loop");
-    // BasicBlock *endEntryBB = createBB(F, "endEntry");
+    BasicBlock *backLoopBB = createBB(F, "backLoop");
     BasicBlock *endLoopBB = createBB(F, "endLoop");
+    
+    // entry
+    // GenBuilder->SetInsertPoint(entryBB);
     // condition generation
     Value *EndCond = ConditionGen(StmtUnit->Condition);
     // 根据EndCond判断是否跳转
     GenBuilder->CreateCondBr(EndCond, loopBB, endLoopBB);
 
-    // condition = true -> loopBB
+    // loop:
     GenBuilder->SetInsertPoint(loopBB);
     std::vector<std::string> removeList;
     for(auto &true_block : StmtUnit->First_block){
@@ -282,16 +285,14 @@ void gen::WhileGen(Function *F, unique_ptr<Stmt> &StmtUnit) {
         else if(true_block->AST_type == STMT) StmtGen(F, true_block);
     }
     NamedValues.remove(removeList);
-    // 根据EndCond判断是否跳转
+    GenBuilder->CreateBr(backLoopBB);
+    
+    // backLoop:
+    GenBuilder->SetInsertPoint(backLoopBB);
     GenBuilder->CreateCondBr(EndCond, loopBB, endLoopBB);
-    
-    
-    // condition = false -> endLoopBB
+
+    // endLoop:
     GenBuilder->SetInsertPoint(endLoopBB);
-
-
-    // merge
-//    PHINode *Phi = GenBuilder->CreatePHI()
 }
 
 Value *gen::IntToFloat(Value *InitVal) {
