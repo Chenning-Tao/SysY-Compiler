@@ -47,7 +47,7 @@ class FuncPrototype : public BaseAST {
 public:
     string Func_name;
     type Func_type;
-    vector<unique_ptr<BaseAST>> Params;
+    vector<shared_ptr<BaseAST>> Params;
 
     void print(int indent) const override;
 };
@@ -55,8 +55,8 @@ public:
 // class for function
 class Func : public BaseAST {
 public:
-    unique_ptr<BaseAST> Prototype;
-    vector<unique_ptr<BaseAST>> Blocks;
+    shared_ptr<BaseAST> Prototype;
+    vector<shared_ptr<BaseAST>> Blocks;
 
     void print(int indent) const override;
 };
@@ -66,8 +66,8 @@ class Decl : public BaseAST {
 public:
     bool Const;
     type Decl_type;
-    unique_ptr<BaseAST> Var;
-    unique_ptr<BaseAST> Exp;
+    shared_ptr<BaseAST> Var;
+    shared_ptr<BaseAST> Exp;
 
     void print(int indent) const override;
 };
@@ -76,12 +76,12 @@ public:
 class Stmt : public BaseAST {
 public:
     stmt Stmt_type;
-    unique_ptr<BaseAST> LVal;
-    unique_ptr<BaseAST> RVal;
+    shared_ptr<BaseAST> LVal;
+    shared_ptr<BaseAST> RVal;
     // second_block is only used in IF-ELSE statement
-    vector<unique_ptr<BaseAST>> First_block;
-    vector<unique_ptr<BaseAST>> Second_block;
-    unique_ptr<BaseAST> Condition;
+    vector<shared_ptr<BaseAST>> First_block;
+    vector<shared_ptr<BaseAST>> Second_block;
+    shared_ptr<BaseAST> Condition;
 
     void print(int indent) const override;
 };
@@ -89,9 +89,9 @@ public:
 // class for expression(e.g. 3+4)
 class Exp : public BaseAST {
 public:
-    unique_ptr<BaseAST> Left_exp;
+    shared_ptr<BaseAST> Left_exp;
     string Operator;
-    unique_ptr<BaseAST> Right_exp;
+    shared_ptr<BaseAST> Right_exp;
 
     void print(int indent) const override;
 };
@@ -110,14 +110,14 @@ class Variable : public BaseAST {
 public:
     string Var_name;
     // if not empty, indicates that this is an array
-    vector<unique_ptr<BaseAST>> Length;
+    vector<shared_ptr<BaseAST>> Length;
 
     void print(int indent) const override;
 };
 
 class CompUnit : public BaseAST {
 public:
-    vector<unique_ptr<BaseAST>> CompUnits;
+    vector<shared_ptr<BaseAST>> CompUnits;
 
     void print(int indent) const override;
 };

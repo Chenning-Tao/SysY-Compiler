@@ -42,9 +42,9 @@ using namespace llvm;
 
 class gen {
 private:
-    std::unique_ptr<LLVMContext> GenContext;
-    std::unique_ptr<IRBuilder<>> GenBuilder;
-    std::unique_ptr<Module> GenModule;
+    std::shared_ptr<LLVMContext> GenContext;
+    std::shared_ptr<IRBuilder<>> GenBuilder;
+    std::shared_ptr<Module> GenModule;
     std::unordered_map<std::string, GlobalVariable *> GlobalValues;
     symbolTable NamedValues;
 
@@ -56,26 +56,26 @@ private:
     Value *IntToFloat(Value *input);
     Value *FloatToInt(Value *InitVal);
 
-    Value *FuncCallGen(unique_ptr<BaseAST> &input);
+    Value *FuncCallGen(shared_ptr<BaseAST> &input);
     void OutputGen();
     void InitExternalFunction();
-    Value *ValueGen(unique_ptr<BaseAST> &input);
-    Value *ConditionGen(unique_ptr<BaseAST> &input);
+    Value *ValueGen(shared_ptr<BaseAST> &input);
+    Value *ConditionGen(shared_ptr<BaseAST> &input);
     Type *GetType(type FuncType);
     Type *GetPtrType(type FuncType);
-    Value *GetLocation(const unique_ptr<Variable> &VarUnit, AllocaInst *var);
+    Value *GetLocation(const shared_ptr<Variable> &VarUnit, AllocaInst *var);
     bool FloatGen(Value *&L, Value *&R);
-    void AssignGen(unique_ptr<Stmt> &StmtUnit);
-    void IfGen(Function *F, unique_ptr<Stmt> &StmtUnit);
+    void AssignGen(shared_ptr<Stmt> &StmtUnit);
+    void IfGen(Function *F, shared_ptr<Stmt> &StmtUnit);
     //WhileGen
-    void WhileGen(Function *F, unique_ptr<Stmt> &StmtUnit);
-    void GlobalVarGen(unique_ptr<BaseAST> &Unit);
-    void DeclGen(unique_ptr<BaseAST> &Block, vector<std::string> &removeList);
-    void FuncGen(unique_ptr<BaseAST> &Unit);
-    void StmtGen(Function *F, unique_ptr<BaseAST> &Block);
+    void WhileGen(Function *F, shared_ptr<Stmt> &StmtUnit);
+    void GlobalVarGen(shared_ptr<BaseAST> &Unit);
+    void DeclGen(shared_ptr<BaseAST> &Block, vector<std::string> &removeList);
+    void FuncGen(shared_ptr<BaseAST> &Unit);
+    void StmtGen(Function *F, shared_ptr<BaseAST> &Block);
 public:
     explicit gen(const string& name);
-    void ProgramGen(unique_ptr<CompUnit> &program);
+    void ProgramGen(shared_ptr<CompUnit> &program);
 
     type GetFuncType(const AllocaInst *var);
 };

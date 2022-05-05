@@ -18,13 +18,13 @@
 using namespace std;
 // declear lex function and error process function
 int yylex();
-void yyerror(unique_ptr<BaseAST> &ast, const char *s);
+void yyerror(shared_ptr<BaseAST> &ast, const char *s);
 extern int yylineno;
 
 %}
 
 // return value
-%parse-param { unique_ptr<BaseAST> &ast }
+%parse-param { shared_ptr<BaseAST> &ast }
 
 // defination of yylval
 %union {
@@ -49,16 +49,16 @@ CompUnit
 		auto func = new CompUnit();
 		func->Name = "CompUnits";
 		func->AST_type = COMPUNIT;
-		func->CompUnits.push_back(unique_ptr<BaseAST>($1));
-		ast = unique_ptr<CompUnit>(func);
+		func->CompUnits.push_back(shared_ptr<BaseAST>($1));
+		ast = shared_ptr<CompUnit>(func);
 		$$ = func;
 	}
 	| Decl {
 		auto decl = new CompUnit();
 		decl->Name = "CompUnits";
 		decl->AST_type = COMPUNIT;
-		decl->CompUnits.push_back(unique_ptr<BaseAST>($1));
-		ast = unique_ptr<CompUnit>(decl);
+		decl->CompUnits.push_back(shared_ptr<BaseAST>($1));
+		ast = shared_ptr<CompUnit>(decl);
 		$$ = decl;
 	}
 	| CompUnit Decl {
@@ -66,8 +66,8 @@ CompUnit
 		comp_unit->Name = "CompUnits";
 		comp_unit->AST_type = COMPUNIT;
 		comp_unit->CompUnits = move(reinterpret_cast<CompUnit*>$1->CompUnits);
-		comp_unit->CompUnits.push_back(unique_ptr<BaseAST>($2));
-		ast = unique_ptr<CompUnit>(comp_unit);
+		comp_unit->CompUnits.push_back(shared_ptr<BaseAST>($2));
+		ast = shared_ptr<CompUnit>(comp_unit);
 		$$ = comp_unit;
 	}
 	| CompUnit FuncDef {
@@ -75,8 +75,8 @@ CompUnit
 		comp_unit->Name = "CompUnits";
 		comp_unit->AST_type = COMPUNIT;
 		comp_unit->CompUnits = move(reinterpret_cast<CompUnit*>$1->CompUnits);
-		comp_unit->CompUnits.push_back(unique_ptr<BaseAST>($2));
-		ast = unique_ptr<CompUnit>(comp_unit);
+		comp_unit->CompUnits.push_back(shared_ptr<BaseAST>($2));
+		ast = shared_ptr<CompUnit>(comp_unit);
 		$$ = comp_unit;
 	} 
 	;
@@ -137,9 +137,9 @@ VarDef
 		auto ast = new Decl();
 		ast->Decl_type = Int;
 		auto var_ast = new Variable();
-		var_ast->Var_name = *unique_ptr<string>($2);
-		var_ast->Length = vector<unique_ptr<BaseAST>>();
-		ast->Var = unique_ptr<BaseAST>(var_ast);
+		var_ast->Var_name = *shared_ptr<string>($2);
+		var_ast->Length = vector<shared_ptr<BaseAST>>();
+		ast->Var = shared_ptr<BaseAST>(var_ast);
 		ast->Exp = nullptr;
 		$$ = ast;
 	}
@@ -147,19 +147,19 @@ VarDef
 		auto ast = new Decl();
 		ast->Decl_type = Int;
 		auto var_ast = new Variable();
-		var_ast->Var_name = *unique_ptr<string>($2);
-		var_ast->Length = vector<unique_ptr<BaseAST>>();
-		ast->Var = unique_ptr<BaseAST>(var_ast);
-		ast->Exp = unique_ptr<BaseAST>($4);
+		var_ast->Var_name = *shared_ptr<string>($2);
+		var_ast->Length = vector<shared_ptr<BaseAST>>();
+		ast->Var = shared_ptr<BaseAST>(var_ast);
+		ast->Exp = shared_ptr<BaseAST>($4);
 		$$ = ast;
 	}
 	| INT IDENT Exp_Wrap { 
 		auto ast = new Decl();
 		ast->Decl_type = Int;
 		auto var_ast = new Variable();
-		var_ast->Var_name = *unique_ptr<string>($2);
+		var_ast->Var_name = *shared_ptr<string>($2);
 		var_ast->Length = move(reinterpret_cast<Variable*>$3->Length);
-		ast->Var = unique_ptr<BaseAST>(var_ast);
+		ast->Var = shared_ptr<BaseAST>(var_ast);
 		ast->Exp = nullptr;
 		$$ = ast;
 	}
@@ -168,9 +168,9 @@ VarDef
 		auto ast = new Decl();
 		ast->Decl_type = Float;
 		auto var_ast = new Variable();
-		var_ast->Var_name = *unique_ptr<string>($2);
-		var_ast->Length = vector<unique_ptr<BaseAST>>();
-		ast->Var = unique_ptr<BaseAST>(var_ast);
+		var_ast->Var_name = *shared_ptr<string>($2);
+		var_ast->Length = vector<shared_ptr<BaseAST>>();
+		ast->Var = shared_ptr<BaseAST>(var_ast);
 		ast->Exp = nullptr;
 		$$ = ast;
 	}
@@ -178,19 +178,19 @@ VarDef
 		auto ast = new Decl();
 		ast->Decl_type = Float;
 		auto var_ast = new Variable();
-		var_ast->Var_name = *unique_ptr<string>($2);
-		var_ast->Length = vector<unique_ptr<BaseAST>>();
-		ast->Var = unique_ptr<BaseAST>(var_ast);
-		ast->Exp = unique_ptr<BaseAST>($4);
+		var_ast->Var_name = *shared_ptr<string>($2);
+		var_ast->Length = vector<shared_ptr<BaseAST>>();
+		ast->Var = shared_ptr<BaseAST>(var_ast);
+		ast->Exp = shared_ptr<BaseAST>($4);
 		$$ = ast;
 	}
 	| FLOAT IDENT Exp_Wrap { 
 		auto ast = new Decl();
 		ast->Decl_type = Float;
 		auto var_ast = new Variable();
-		var_ast->Var_name = *unique_ptr<string>($2);
+		var_ast->Var_name = *shared_ptr<string>($2);
 		var_ast->Length = move(reinterpret_cast<Variable*>$3->Length);
-		ast->Var = unique_ptr<BaseAST>(var_ast);
+		ast->Var = shared_ptr<BaseAST>(var_ast);
 		ast->Exp = nullptr;
 		$$ = ast;
 	}
@@ -215,7 +215,7 @@ FuncDef
 		auto ast = new Func();
 		ast->Name = "FuncDef";
 		ast->AST_type = FUNC;
-		ast->Prototype = unique_ptr<BaseAST>($1);
+		ast->Prototype = shared_ptr<BaseAST>($1);
 		ast->Blocks = move(reinterpret_cast<Func*>$4->Blocks);
 		$$ = ast;
 	}
@@ -225,7 +225,7 @@ FuncDef
 		ast->AST_type = FUNC;
 		auto func_prototype = move(reinterpret_cast<FuncPrototype*>$1);
 		func_prototype->Params = move(reinterpret_cast<FuncPrototype*>$3->Params);
-		ast->Prototype = unique_ptr<BaseAST>(func_prototype);
+		ast->Prototype = shared_ptr<BaseAST>(func_prototype);
 		ast->Blocks = move(reinterpret_cast<Func*>$5->Blocks);
 		$$ = ast;
 	}
@@ -235,21 +235,21 @@ FuncType
 	: INT IDENT {
 		auto ast = new FuncPrototype();
 		ast->AST_type = FUNCPROTO;
-		ast->Func_name = *unique_ptr<string>($2);
+		ast->Func_name = *shared_ptr<string>($2);
 		ast->Func_type = Int;
 		$$ = ast;
 	}
 	| FLOAT IDENT {
 		auto ast = new FuncPrototype();
 		ast->AST_type = FUNCPROTO;
-		ast->Func_name = *unique_ptr<string>($2);
+		ast->Func_name = *shared_ptr<string>($2);
 		ast->Func_type = Float;
 		$$ = ast;
 	}
 	| VOID IDENT {
 		auto ast = new FuncPrototype();
 		ast->AST_type = FUNCPROTO;
-		ast->Func_name = *unique_ptr<string>($2);
+		ast->Func_name = *shared_ptr<string>($2);
 		ast->Func_type = Void;
 		$$ = ast;
 	}
@@ -271,12 +271,12 @@ FuncFParam
 		auto decl = new Decl();
 		decl->Decl_type = reinterpret_cast<Decl*>$1->Decl_type;
 		auto var_ast = new Variable();
-		var_ast->Var_name = *unique_ptr<string>($2);
-		var_ast->Length = vector<unique_ptr<BaseAST>>();
-		decl->Var = unique_ptr<BaseAST>(var_ast);
+		var_ast->Var_name = *shared_ptr<string>($2);
+		var_ast->Length = vector<shared_ptr<BaseAST>>();
+		decl->Var = shared_ptr<BaseAST>(var_ast);
 		decl->Exp = nullptr;
-		ast->Params = vector<unique_ptr<BaseAST>>();
-		ast->Params.push_back(unique_ptr<BaseAST>(decl));
+		ast->Params = vector<shared_ptr<BaseAST>>();
+		ast->Params.push_back(shared_ptr<BaseAST>(decl));
 		$$ = ast;
 	}
 	| BType IDENT '[' ']' { 
@@ -284,16 +284,16 @@ FuncFParam
 		auto decl = new Decl();
 		decl->Decl_type = reinterpret_cast<Decl*>$1->Decl_type;
 		auto var_ast = new Variable();
-		var_ast->Var_name = *unique_ptr<string>($2);
-		var_ast->Length = vector<unique_ptr<BaseAST>>();
+		var_ast->Var_name = *shared_ptr<string>($2);
+		var_ast->Length = vector<shared_ptr<BaseAST>>();
 		auto fake_exp = new Exp();
 		fake_exp->AST_type = EXP;
 		fake_exp->Name = "fake";
-		var_ast->Length.push_back(unique_ptr<BaseAST>(fake_exp));
-		decl->Var = unique_ptr<BaseAST>(var_ast);
+		var_ast->Length.push_back(shared_ptr<BaseAST>(fake_exp));
+		decl->Var = shared_ptr<BaseAST>(var_ast);
 		decl->Exp = nullptr;
-		ast->Params = vector<unique_ptr<BaseAST>>();
-		ast->Params.push_back(unique_ptr<BaseAST>(decl));
+		ast->Params = vector<shared_ptr<BaseAST>>();
+		ast->Params.push_back(shared_ptr<BaseAST>(decl));
 		$$ = ast;
 	}
 	| BType IDENT '[' ']' Exp_Wrap { }
@@ -302,13 +302,13 @@ FuncFParam
 Exp_Wrap
 	: '[' Exp ']' { 
 		auto ast = new Variable();
-		ast->Length = vector<unique_ptr<BaseAST>>();
-		ast->Length.push_back(unique_ptr<BaseAST>($2));
+		ast->Length = vector<shared_ptr<BaseAST>>();
+		ast->Length.push_back(shared_ptr<BaseAST>($2));
 		$$ = ast;
 	}
 	| '[' Exp ']' Exp_Wrap { 
 		auto ast = reinterpret_cast<Variable*>$4;
-		ast->Length.insert(ast->Length.begin(), unique_ptr<BaseAST>($2));
+		ast->Length.insert(ast->Length.begin(), shared_ptr<BaseAST>($2));
 		$$ = move(ast);
 	}
 	;
@@ -318,12 +318,12 @@ Block : '{' BlockItem_Wrap '}' { $$ = $2; } ;
 BlockItem_Wrap
 	: BlockItem { 
 		auto ast = new Func();
-		ast->Blocks.push_back(unique_ptr<BaseAST>($1));
+		ast->Blocks.push_back(shared_ptr<BaseAST>($1));
 		$$ = ast;
 	}
 	| BlockItem BlockItem_Wrap { 
 		auto ast = reinterpret_cast<Func*>$2;
-		ast->Blocks.insert(ast->Blocks.begin(), unique_ptr<BaseAST>($1));
+		ast->Blocks.insert(ast->Blocks.begin(), shared_ptr<BaseAST>($1));
 		$$ = move(ast);
 	}
 	;
@@ -339,8 +339,8 @@ Stmt
 		ast->Name = "BinaryOpStmt";
 		ast->AST_type = STMT;
 		ast->Stmt_type = Assign;
-		ast->LVal = unique_ptr<BaseAST>($1);
-		ast->RVal = unique_ptr<BaseAST>($3);
+		ast->LVal = shared_ptr<BaseAST>($1);
+		ast->RVal = shared_ptr<BaseAST>($3);
 		$$ = ast;
 	}
 	| Exp ';'{ }
@@ -350,7 +350,7 @@ Stmt
 		ast->Name = "IfStmt";
 		ast->AST_type = STMT;
 		ast->Stmt_type = If;
-		ast->Condition = unique_ptr<BaseAST>($3);
+		ast->Condition = shared_ptr<BaseAST>($3);
 		ast->First_block = move(reinterpret_cast<Func*>$5->Blocks);
 		$$ = ast;
 	}
@@ -361,7 +361,7 @@ Stmt
 		ast->Name = "WhileStmt";
 		ast->AST_type = STMT;
 		ast->Stmt_type = While;
-		ast->Condition = unique_ptr<BaseAST>($3);
+		ast->Condition = shared_ptr<BaseAST>($3);
 		ast->First_block = move(reinterpret_cast<Func*>$5->Blocks);
 		$$ = ast;
 	
@@ -374,7 +374,7 @@ Stmt
 		ast->AST_type = STMT;
 		ast->Stmt_type = Return;
 		// put return Exp in RVal
-		ast->RVal = unique_ptr<BaseAST>($2);
+		ast->RVal = shared_ptr<BaseAST>($2);
 		$$ = ast;
 	}
 	| RETURN ';' { 
@@ -397,14 +397,14 @@ LVal
 	: IDENT { 
 		auto ast = new Variable();
 		ast->AST_type = VARIABLE;
-		ast->Var_name = *unique_ptr<string>($1);
-		ast->Length = vector<unique_ptr<BaseAST>>();
+		ast->Var_name = *shared_ptr<string>($1);
+		ast->Length = vector<shared_ptr<BaseAST>>();
 		$$ = ast;
 	}
 	| IDENT Exp_Wrap { 
 		auto ast = new Variable();
 		ast->AST_type = VARIABLE;
-		ast->Var_name = *unique_ptr<string>($1);
+		ast->Var_name = *shared_ptr<string>($1);
 		ast->Length = move(reinterpret_cast<Variable*>$2->Length);
 		$$ = ast;
 	}
@@ -417,7 +417,7 @@ PrimaryExp
 		auto ast = new Exp();
 		ast->AST_type = EXP;
 		ast->Name = "Number";
-		ast->Left_exp = unique_ptr<BaseAST>($1);
+		ast->Left_exp = shared_ptr<BaseAST>($1);
 		ast->Right_exp = nullptr;
 		ast->Operator = "";
 		$$ = ast;
@@ -449,14 +449,14 @@ UnaryExp
 		auto ast = new FuncPrototype();
 		ast->AST_type = FUNCPROTO;
 		ast->Name = "FuncCall";
-		ast->Func_name = *unique_ptr<string>($1);
+		ast->Func_name = *shared_ptr<string>($1);
 		$$ = ast;
 	}
 	| IDENT '(' FuncRParams ')' { 
 		auto ast = new FuncPrototype();
 		ast->AST_type = FUNCPROTO;
 		ast->Name = "FuncCall";
-		ast->Func_name = *unique_ptr<string>($1);
+		ast->Func_name = *shared_ptr<string>($1);
 		ast->Params = move(reinterpret_cast<FuncPrototype*>$3->Params);
 		$$ = ast;
 	}
@@ -473,7 +473,7 @@ FuncRParams
 	: Exp { 
 		auto ast = new FuncPrototype();
 		ast->AST_type = FUNCPROTO;
-		ast->Params.push_back(unique_ptr<BaseAST>($1));
+		ast->Params.push_back(shared_ptr<BaseAST>($1));
 		$$ = ast;
 	}
 	| Exp FuncRParams_Wrap { }
@@ -496,8 +496,8 @@ AddExp
 		auto ast = new Exp();
 		ast->AST_type = EXP;
 		ast->Name = "AddExp";
-		ast->Left_exp = unique_ptr<BaseAST>($1);
-		ast->Right_exp = unique_ptr<BaseAST>($3);
+		ast->Left_exp = shared_ptr<BaseAST>($1);
+		ast->Right_exp = shared_ptr<BaseAST>($3);
 		ast->Operator = "+";
 		$$ = ast;
 	}
@@ -510,9 +510,9 @@ RelExp
 		auto ast = new Exp();
 		ast->AST_type = EXP;
 		ast->Name = "RelExp";
-		ast->Left_exp = unique_ptr<BaseAST>($1);
+		ast->Left_exp = shared_ptr<BaseAST>($1);
 		ast->Operator = "<";
-		ast->Right_exp = unique_ptr<BaseAST>($3);
+		ast->Right_exp = shared_ptr<BaseAST>($3);
 		$$ = ast;
 	}
 	| RelExp '>' AddExp { }
@@ -526,18 +526,18 @@ EqExp
 		auto ast = new Exp();
 		ast->AST_type = EXP;
 		ast->Name = "EqExp";
-		ast->Left_exp = unique_ptr<BaseAST>($1);
+		ast->Left_exp = shared_ptr<BaseAST>($1);
 		ast->Operator = "==";
-		ast->Right_exp = unique_ptr<BaseAST>($4);
+		ast->Right_exp = shared_ptr<BaseAST>($4);
 		$$ = ast;
 	}
 	| EqExp '!' '=' RelExp { 
 		auto ast = new Exp();
 		ast->AST_type = EXP;
 		ast->Name = "EqExp";
-		ast->Left_exp = unique_ptr<BaseAST>($1);
+		ast->Left_exp = shared_ptr<BaseAST>($1);
 		ast->Operator = "!=";
-		ast->Right_exp = unique_ptr<BaseAST>($4);
+		ast->Right_exp = shared_ptr<BaseAST>($4);
 		$$ = ast;
 	}
 	;
@@ -555,6 +555,6 @@ LOrExp
 %%
 
 // error process function, second parameter is error message
-void yyerror(unique_ptr<BaseAST> &ast, const char *s) {
+void yyerror(shared_ptr<BaseAST> &ast, const char *s) {
 	cerr << "error: " << s << " at line " << yylineno << endl;
 }

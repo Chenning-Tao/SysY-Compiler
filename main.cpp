@@ -9,7 +9,7 @@
 using namespace std;
 
 extern FILE *yyin;
-extern int yyparse(unique_ptr<BaseAST> &ast);
+extern int yyparse(shared_ptr<BaseAST> &ast);
 extern int yydebug;
 
 int main(int argc, const char *argv[]) {
@@ -20,7 +20,7 @@ int main(int argc, const char *argv[]) {
     assert(yyin);
 
     // using parser func
-    unique_ptr<BaseAST> ast;
+    shared_ptr<BaseAST> ast;
     // yydebug = 1;
     auto ret = yyparse(ast);
     assert(!ret);
@@ -28,7 +28,7 @@ int main(int argc, const char *argv[]) {
 
     // generate LLVM IR
     gen program_gen("test");
-    unique_ptr<CompUnit> program_ast(reinterpret_cast<CompUnit*>(ast.release()));
+    shared_ptr<CompUnit> program_ast(reinterpret_pointer_cast<CompUnit>(ast));
     program_gen.ProgramGen(program_ast);
 
     return 0;

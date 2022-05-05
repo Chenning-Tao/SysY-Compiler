@@ -6,7 +6,7 @@
 
 using namespace llvm;
 
-void gen::ProgramGen(unique_ptr<CompUnit> &program) {\
+void gen::ProgramGen(shared_ptr<CompUnit> &program) {\
     // init external function
     InitExternalFunction();
     for (auto & Unit : program->CompUnits) {
@@ -96,11 +96,11 @@ void gen::OutputGen() {
     outs() << "Wrote " << Filename << "\n";
 }
 
-void gen::GlobalVarGen(unique_ptr<BaseAST> &Unit) {
-    unique_ptr<Decl> global(reinterpret_cast<Decl*>(Unit.release()));
+void gen::GlobalVarGen(shared_ptr<BaseAST> &Unit) {
+    shared_ptr<Decl> global(reinterpret_pointer_cast<Decl>(Unit));
     // determine whether it has been declared
     // TODO: add array
-    unique_ptr<Variable> var(reinterpret_cast<Variable*>(global->Var.release()));
+    shared_ptr<Variable> var(reinterpret_pointer_cast<Variable>(global->Var));
     if (GlobalValues.find(var->Var_name) == GlobalValues.end()) {
         GlobalVariable *gVar = createGlob(GetType(global->Decl_type), var->Var_name);
         if (global->Exp != nullptr)
@@ -110,17 +110,17 @@ void gen::GlobalVarGen(unique_ptr<BaseAST> &Unit) {
     else cout << "error: redefinition of '"<< var->Var_name << "'" << endl;
 }
 
-void gen::FuncGen(unique_ptr<BaseAST> &Unit) {
-    unique_ptr<Func> FuncUnit(reinterpret_cast<Func*>(Unit.release()));
-    unique_ptr<FuncPrototype> Proto(reinterpret_cast<FuncPrototype*>(FuncUnit->Prototype.release()));
+void gen::FuncGen(shared_ptr<BaseAST> &Unit) {
+    shared_ptr<Func> FuncUnit(reinterpret_pointer_cast<Func>(Unit));
+    shared_ptr<FuncPrototype> Proto(reinterpret_pointer_cast<FuncPrototype>(FuncUnit->Prototype));
     // Parameters
     vector<Type*> Para{};
     vector<std::string> ParaNames{};
     vector<int> ParaDim{};
     vector<type> ParaType{};
     for (auto & Param : Proto->Params){
-        unique_ptr<Decl> decl(reinterpret_cast<Decl*>(Param.release()));
-        unique_ptr<Variable> var(reinterpret_cast<Variable*>(decl->Var.release()));
+        shared_ptr<Decl> decl(reinterpret_pointer_cast<Decl>(Param));
+        shared_ptr<Variable> var(reinterpret_pointer_cast<Variable>(decl->Var));
         ParaNames.push_back(var->Var_name);
         if (var->Length.empty()) Para.push_back(GetType(decl->Decl_type));
         else Para.push_back(GetPtrType(decl->Decl_type));
@@ -158,9 +158,9 @@ void gen::FuncGen(unique_ptr<BaseAST> &Unit) {
     NamedValues.remove(removeList);
 }
 
-void gen::DeclGen(unique_ptr<BaseAST> &Block, vector<std::string> &removeList) {
-    unique_ptr<Decl> DeclUnit(reinterpret_cast<Decl*>(Block.release()));
-    unique_ptr<Variable> VarUnit(reinterpret_cast<Variable*>(DeclUnit->Var.release()));
+void gen::DeclGen(shared_ptr<BaseAST> &Block, vector<std::string> &removeList) {
+    shared_ptr<Decl> DeclUnit(reinterpret_pointer_cast<Decl>(Block));
+    shared_ptr<Variable> VarUnit(reinterpret_pointer_cast<Variable>(DeclUnit->Var));
     auto *cur = GenBuilder->GetInsertBlock();
     // check redefinition
     auto check_sym = find(removeList.begin(), removeList.end(), VarUnit->Var_name);
@@ -188,8 +188,8 @@ void gen::DeclGen(unique_ptr<BaseAST> &Block, vector<std::string> &removeList) {
     removeList.push_back(VarUnit->Var_name);
 }
 
-void gen::StmtGen(Function *F, unique_ptr<BaseAST> &Block) {
-    unique_ptr<Stmt> StmtUnit(reinterpret_cast<Stmt*>(Block.release()));
+void gen::StmtGen(Function *F, shared_ptr<BaseAST> &Block) {
+    shared_ptr<Stmt> StmtUnit(reinterpret_pointer_cast<Stmt>(Block));
     if (StmtUnit->Stmt_type == If) IfGen(F, StmtUnit);
     else if (StmtUnit->Stmt_type == While) WhileGen(F, StmtUnit);
     else if(StmtUnit->Stmt_type == Assign) AssignGen(StmtUnit);
@@ -199,8 +199,8 @@ void gen::StmtGen(Function *F, unique_ptr<BaseAST> &Block) {
     }
 }
 
-void gen::AssignGen(unique_ptr<Stmt> &StmtUnit) {
-    unique_ptr<Variable> VarUnit(reinterpret_cast<Variable*>(StmtUnit->LVal.release()));
+void gen::AssignGen(shared_ptr<Stmt> &StmtUnit) {
+    shared_ptr<Variable> VarUnit(reinterpret_pointer_cast<Variable>(StmtUnit->LVal));
     // check symbol table
     AllocaInst *var = NamedValues.find(VarUnit->Var_name);
     if (var == nullptr) {
@@ -221,7 +221,7 @@ void gen::AssignGen(unique_ptr<Stmt> &StmtUnit) {
     }
 }
 
-Value *gen::GetLocation(const unique_ptr<Variable> &VarUnit, AllocaInst *var) {
+Value *gen::GetLocation(const shared_ptr<Variable> &VarUnit, AllocaInst *var) {
     Value *location;
     if (var->getAllocatedType()->isPointerTy()){
         Value *st = GenBuilder->CreateLoad(var->getAllocatedType(), var, var->getName().data());
@@ -234,7 +234,7 @@ Value *gen::GetLocation(const unique_ptr<Variable> &VarUnit, AllocaInst *var) {
     return location;
 }
 
-void gen::IfGen(Function *F, unique_ptr<Stmt> &StmtUnit) {
+void gen::IfGen(Function *F, shared_ptr<Stmt> &StmtUnit) {
     BasicBlock *ThenBB = createBB(F, "then");
     BasicBlock *ElseBB = createBB(F, "else");
     BasicBlock *MergeBB = createBB(F, "ifcond");
@@ -263,15 +263,11 @@ void gen::IfGen(Function *F, unique_ptr<Stmt> &StmtUnit) {
 }
 
 // While CodeGen
-void gen::WhileGen(Function *F, unique_ptr<Stmt> &StmtUnit) {
-    
-    BasicBlock *entryBB = createBB(F, "entry");
+void gen::WhileGen(Function *F, shared_ptr<Stmt> &StmtUnit) {
+
     BasicBlock *loopBB = createBB(F, "loop");
-    BasicBlock *backLoopBB = createBB(F, "backLoop");
     BasicBlock *endLoopBB = createBB(F, "endLoop");
-    
-    // entry
-    // GenBuilder->SetInsertPoint(entryBB);
+
     // condition generation
     Value *EndCond = ConditionGen(StmtUnit->Condition);
     // 根据EndCond判断是否跳转
@@ -285,10 +281,7 @@ void gen::WhileGen(Function *F, unique_ptr<Stmt> &StmtUnit) {
         else if(true_block->AST_type == STMT) StmtGen(F, true_block);
     }
     NamedValues.remove(removeList);
-    GenBuilder->CreateBr(backLoopBB);
-    
-    // backLoop:
-    GenBuilder->SetInsertPoint(backLoopBB);
+    EndCond = ConditionGen(StmtUnit->Condition);
     GenBuilder->CreateCondBr(EndCond, loopBB, endLoopBB);
 
     // endLoop:
@@ -326,8 +319,8 @@ BasicBlock *gen::createBB(Function *fooFunc, const string &Name) {
     return BasicBlock::Create(*GenContext, Name, fooFunc);
 }
 
-Value *gen::ConditionGen(unique_ptr<BaseAST> &input) {
-    unique_ptr<Exp> condition(reinterpret_cast<Exp*>(input.release()));
+Value *gen::ConditionGen(shared_ptr<BaseAST> &input) {
+    shared_ptr<Exp> condition(reinterpret_pointer_cast<Exp>(input));
     Value *L = ValueGen(condition->Left_exp);
     Value *R = ValueGen(condition->Right_exp);
     bool is_float = FloatGen(L, R);
@@ -346,14 +339,14 @@ Value *gen::ConditionGen(unique_ptr<BaseAST> &input) {
     }
 }
 
-Value *gen::ValueGen(unique_ptr<BaseAST> &input) {
+Value *gen::ValueGen(shared_ptr<BaseAST> &input) {
     if (input->AST_type == FINALEXP) {
-        unique_ptr<FinalExp> expression(reinterpret_cast<FinalExp*>(input.release()));
+        shared_ptr<FinalExp> expression(reinterpret_pointer_cast<FinalExp>(input));
         if(expression->Exp_type == Float) return ConstantFP::get(*GenContext, APFloat(expression->Number));
         else if(expression->Exp_type == Int) return ConstantInt::get(*GenContext, APInt(32, int(expression->Number)));
     }
     else if (input->AST_type == VARIABLE){
-        unique_ptr<Variable> variable(reinterpret_cast<Variable*>(input.release()));
+        shared_ptr<Variable> variable(reinterpret_pointer_cast<Variable>(input));
         AllocaInst *var = NamedValues.find(variable->Var_name);
         if (var == nullptr) {
             cout << "error: use of undeclared identifier '" << variable->Var_name << "'" << endl;
@@ -369,7 +362,7 @@ Value *gen::ValueGen(unique_ptr<BaseAST> &input) {
     }
     else if (input->AST_type == FUNCPROTO) return FuncCallGen(input);
     else if (input->AST_type == EXP) {
-        unique_ptr<Exp> expression(reinterpret_cast<Exp*>(input.release()));
+        shared_ptr<Exp> expression(reinterpret_pointer_cast<Exp>(input));
         Value *L = ValueGen(expression->Left_exp);
         // fake EXP node
         if (expression->Operator.empty()) return L;
@@ -411,8 +404,8 @@ type gen::GetFuncType(const AllocaInst *var) {
     return re;
 }
 
-Value *gen::FuncCallGen(unique_ptr<BaseAST> &input) {
-    unique_ptr<FuncPrototype> prototype(reinterpret_cast<FuncPrototype*>(input.release()));
+Value *gen::FuncCallGen(shared_ptr<BaseAST> &input) {
+    shared_ptr<FuncPrototype> prototype(reinterpret_pointer_cast<FuncPrototype>(input));
     Function *CalleeF = GenModule->getFunction(prototype->Func_name);
     if (CalleeF == nullptr) {
         cout << "error: use of undeclared function '" << prototype->Func_name << "'" << endl;
@@ -422,13 +415,13 @@ Value *gen::FuncCallGen(unique_ptr<BaseAST> &input) {
     if (!prototype->Params.empty()){
         for(auto & Param : prototype->Params){
             if (Param->AST_type == VARIABLE){
-                unique_ptr<Variable> VarUnit(reinterpret_cast<Variable*>(Param.release()));
+                shared_ptr<Variable> VarUnit(reinterpret_pointer_cast<Variable>(Param));
                 AllocaInst *var = NamedValues.find(VarUnit->Var_name);
                 int dim = NamedValues.array_dim(VarUnit->Var_name);
                 if (dim > 0 && VarUnit->Length.empty())
                     ArgsV.push_back(GenBuilder->CreateGEP(var->getAllocatedType(), var, ConstantInt::get(*GenContext, APInt(32, 0))));
                 else{
-                    unique_ptr<BaseAST> te(reinterpret_cast<BaseAST*>(VarUnit.release()));
+                    shared_ptr<BaseAST> te(reinterpret_pointer_cast<BaseAST>(VarUnit));
                     ArgsV.push_back(ValueGen(te));
                 }
             }
