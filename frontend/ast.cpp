@@ -35,6 +35,8 @@ void Stmt::print(int indent) const {
             break;
         case While:
             break;
+        case Printf:
+            break;
         case Break:
             break;
         case Continue:

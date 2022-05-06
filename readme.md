@@ -15,9 +15,9 @@ generate object file
 ```
 This command will generate a object file(.o).
 
-Then use clang to generate the executable file.
+Then use clang to generate the executable file. (currently we don't need external library)
 ```shell
-clang-14 output.o ../library/sylib.a -o program
+clang-14 output.o -no-pie -o program
 ```
 
 ## Generate static library

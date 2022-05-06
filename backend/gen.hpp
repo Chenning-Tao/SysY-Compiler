@@ -63,11 +63,11 @@ private:
     Value *ConditionGen(shared_ptr<BaseAST> &input);
     Type *GetType(type FuncType);
     Type *GetPtrType(type FuncType);
+    type GetFuncType(const AllocaInst *var);
     Value *GetLocation(const shared_ptr<Variable> &VarUnit, AllocaInst *var);
     bool FloatGen(Value *&L, Value *&R);
     void AssignGen(shared_ptr<Stmt> &StmtUnit);
     void IfGen(Function *F, shared_ptr<Stmt> &StmtUnit);
-    //WhileGen
     void WhileGen(Function *F, shared_ptr<Stmt> &StmtUnit);
     void GlobalVarGen(shared_ptr<BaseAST> &Unit);
     void DeclGen(shared_ptr<BaseAST> &Block, vector<std::string> &removeList);
@@ -76,8 +76,6 @@ private:
 public:
     explicit gen(const string& name);
     void ProgramGen(shared_ptr<CompUnit> &program);
-
-    type GetFuncType(const AllocaInst *var);
 };
 
 

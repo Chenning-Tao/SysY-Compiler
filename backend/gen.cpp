@@ -6,7 +6,7 @@
 
 using namespace llvm;
 
-void gen::ProgramGen(shared_ptr<CompUnit> &program) {\
+void gen::ProgramGen(shared_ptr<CompUnit> &program) {
     // init external function
     InitExternalFunction();
     for (auto & Unit : program->CompUnits) {
@@ -18,27 +18,14 @@ void gen::ProgramGen(shared_ptr<CompUnit> &program) {\
 }
 
 void gen::InitExternalFunction() {
-    // int getint()
-    FunctionType *getintTy = FunctionType::get(GetType(Int), false);
-    Function *getint = Function::Create(getintTy, Function::ExternalLinkage, "getint", GenModule.get());
-    // void putint(a)
-    std::vector<Type *> putintParas(1, GetType(Int));
-    FunctionType *putintTy = FunctionType::get(GetType(Void), putintParas, false);
-    Function *putint = Function::Create(putintTy, Function::ExternalLinkage, "putint", GenModule.get());
-    // int getch()
-    FunctionType *getchTy = FunctionType::get(GetType(Int), false);
-    Function *getch = Function::Create(getchTy, Function::ExternalLinkage, "getch", GenModule.get());
-    // int getfloat()
-    FunctionType *getfloatTy = FunctionType::get(GetType(Float), false);
-    Function *getfloat = Function::Create(getfloatTy, Function::ExternalLinkage, "getfloat", GenModule.get());
-    // void putch(a)
-    std::vector<Type *> putchParas(1, GetType(Int));
-    FunctionType *putchTy = FunctionType::get(GetType(Void), putchParas, false);
-    Function *putch = Function::Create(putchTy, Function::ExternalLinkage, "putch", GenModule.get());
-    // void putfloat(a)
-    std::vector<Type *> putfloatParas(1, GetType(Float));
-    FunctionType *putfloatTy = FunctionType::get(GetType(Void), putfloatParas, false);
-    Function *putfloat = Function::Create(putfloatTy, Function::ExternalLinkage, "putfloat", GenModule.get());
+    // scanf
+    FunctionType *scanfTy = FunctionType::get(GetType(Int), {Type::getInt8PtrTy(*GenContext)}, true);
+    Function *scanf = Function::Create(scanfTy, Function::ExternalLinkage, "scanf", GenModule.get());
+    scanf->setCallingConv(CallingConv::C);
+    // printf
+    FunctionType *printfTY = FunctionType::get(GetType(Int), {Type::getInt8PtrTy(*GenContext)}, true);
+    Function *printf = Function::Create(printfTY, Function::ExternalLinkage, "printf", GenModule.get());
+    printf->setCallingConv(CallingConv::C);
 }
 
 void gen::OutputGen() {
@@ -192,10 +179,22 @@ void gen::StmtGen(Function *F, shared_ptr<BaseAST> &Block) {
     shared_ptr<Stmt> StmtUnit(reinterpret_pointer_cast<Stmt>(Block));
     if (StmtUnit->Stmt_type == If) IfGen(F, StmtUnit);
     else if (StmtUnit->Stmt_type == While) WhileGen(F, StmtUnit);
-    else if(StmtUnit->Stmt_type == Assign) AssignGen(StmtUnit);
-    else if(StmtUnit->Stmt_type == Return){
-        if(StmtUnit->RVal == nullptr) GenBuilder->CreateRetVoid();
+    else if (StmtUnit->Stmt_type == Assign) AssignGen(StmtUnit);
+    else if (StmtUnit->Stmt_type == Return){
+        if (StmtUnit->RVal == nullptr) GenBuilder->CreateRetVoid();
         else GenBuilder->CreateRet(ValueGen(StmtUnit->RVal));
+    }
+    else if (StmtUnit->Stmt_type == Printf) {
+        Function *CalleeF = GenModule->getFunction("printf");
+        std::vector<llvm::Value *> ArgValues;
+        auto *FormatStrInst = GenBuilder->CreateGlobalStringPtr(StmtUnit->IO, "printf_format_str");
+        ArgValues.push_back(FormatStrInst);
+
+        if (!StmtUnit->First_block.empty()) {
+            for(auto & i : StmtUnit->First_block)
+                ArgValues.push_back(ValueGen(i));
+        }
+        GenBuilder->CreateCall(CalleeF, ArgValues, "c_printf");
     }
 }
 

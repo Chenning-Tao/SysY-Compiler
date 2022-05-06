@@ -34,8 +34,8 @@ extern int yylineno;
     BaseAST *ast_val;
 }
 
-%token <str_val> IDENT
-%token INT FLOAT VOID RETURN CONST IF ELSE WHILE BREAK CONTINUE
+%token <str_val> IDENT STRING
+%token INT FLOAT VOID RETURN CONST IF ELSE WHILE BREAK CONTINUE PRINTF
 %token <int_val> INT_CONST
 %token <float_val> FLOAT_CONST
 
@@ -341,6 +341,24 @@ Stmt
 		ast->Stmt_type = Assign;
 		ast->LVal = shared_ptr<BaseAST>($1);
 		ast->RVal = shared_ptr<BaseAST>($3);
+		$$ = ast;
+	}
+	| PRINTF '(' STRING ')' ';' {
+		auto ast = new Stmt();
+		ast->Name = "PrintfStmt";
+		ast->AST_type = STMT;
+		ast->Stmt_type = Printf;
+		ast->IO = *shared_ptr<string>($3);
+		ast->First_block = vector<shared_ptr<BaseAST>>();
+		$$ = ast;
+	}
+	| PRINTF '(' STRING ',' FuncRParams ')' ';' {
+		auto ast = new Stmt();
+		ast->Name = "PrintfStmt";
+		ast->AST_type = STMT;
+		ast->Stmt_type = Printf;
+		ast->IO = *shared_ptr<string>($3);
+		ast->First_block = move(reinterpret_cast<FuncPrototype*>$5->Params);
 		$$ = ast;
 	}
 	| Exp ';'{ }

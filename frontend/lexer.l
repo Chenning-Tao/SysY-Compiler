@@ -18,6 +18,7 @@ WhiteSpace    [ \t\n\r]*
 LineComment   "//".*$
 
 Identifier    [a-zA-Z_][a-zA-Z0-9_]*
+String        \"(\\.|[^"\\])*\"
 
 Decimal       [1-9][0-9]*
 Octal         0[0-7]*
@@ -39,8 +40,10 @@ Float         [0-9]+\.[0-9]*
 "while"         { return WHILE; }
 "break"         { return BREAK; }
 "continue"      { return CONTINUE; }
+"printf"        { return PRINTF; }
 
 {Identifier}    { yylval.str_val = new string(yytext); return IDENT; }
+{String}        { char* tmp = new char[yyleng - 1]; strcpy(tmp, yytext + 1); tmp[yyleng-2] = '\0'; yylval.str_val = new string(tmp); return STRING; }
 
 {Decimal}       { yylval.int_val = strtol(yytext, nullptr, 0); return INT_CONST; }
 {Octal}         { yylval.int_val = strtol(yytext, nullptr, 0); return INT_CONST; }
