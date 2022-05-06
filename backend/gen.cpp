@@ -184,18 +184,41 @@ void gen::StmtGen(Function *F, shared_ptr<BaseAST> &Block) {
         if (StmtUnit->RVal == nullptr) GenBuilder->CreateRetVoid();
         else GenBuilder->CreateRet(ValueGen(StmtUnit->RVal));
     }
-    else if (StmtUnit->Stmt_type == Printf) {
-        Function *CalleeF = GenModule->getFunction("printf");
-        std::vector<llvm::Value *> ArgValues;
-        auto *FormatStrInst = GenBuilder->CreateGlobalStringPtr(StmtUnit->IO, "printf_format_str");
-        ArgValues.push_back(FormatStrInst);
+    else if (StmtUnit->Stmt_type == Printf) PrintfGen(StmtUnit);
+    else if (StmtUnit->Stmt_type == Scanf) ScanfGen(StmtUnit);
+}
 
-        if (!StmtUnit->First_block.empty()) {
-            for(auto & i : StmtUnit->First_block)
-                ArgValues.push_back(ValueGen(i));
+void gen::ScanfGen(shared_ptr<Stmt> &StmtUnit) {
+    Function *CalleeF = GenModule->getFunction("scanf");
+    vector<Value *> ArgValues;
+    auto *FormatStrInst = GenBuilder->CreateGlobalStringPtr(StmtUnit->IO, "scanf_format_str");
+    ArgValues.push_back(FormatStrInst);
+    if (!StmtUnit->First_block.empty()) {
+        for(auto & Param : StmtUnit->First_block){
+            if (Param->AST_type == VARIABLE){
+                shared_ptr<Variable> VarUnit(reinterpret_pointer_cast<Variable>(Param));
+                AllocaInst *var = NamedValues.find(VarUnit->Var_name);
+                if (VarUnit->Length.empty())
+                    ArgValues.push_back(GenBuilder->CreateGEP(var->getAllocatedType(), var, ConstantInt::get(*GenContext, APInt(32, 0))));
+                else
+                    ArgValues.push_back(GenBuilder->CreateGEP(var->getAllocatedType(), var, ValueGen(VarUnit->Length[0])));
+            }
         }
-        GenBuilder->CreateCall(CalleeF, ArgValues, "c_printf");
     }
+    GenBuilder->CreateCall(CalleeF, ArgValues, "c_scanf");
+}
+
+void gen::PrintfGen(shared_ptr<Stmt> &StmtUnit) {
+    Function *CalleeF = GenModule->getFunction("printf");
+    vector<Value *> ArgValues;
+    auto *FormatStrInst = GenBuilder->CreateGlobalStringPtr(StmtUnit->IO, "printf_format_str");
+    ArgValues.push_back(FormatStrInst);
+
+    if (!StmtUnit->First_block.empty()) {
+        for(auto & i : StmtUnit->First_block)
+            ArgValues.push_back(ValueGen(i));
+    }
+    GenBuilder->CreateCall(CalleeF, ArgValues, "c_printf");
 }
 
 void gen::AssignGen(shared_ptr<Stmt> &StmtUnit) {

@@ -35,7 +35,7 @@ extern int yylineno;
 }
 
 %token <str_val> IDENT STRING
-%token INT FLOAT VOID RETURN CONST IF ELSE WHILE BREAK CONTINUE PRINTF
+%token INT FLOAT VOID RETURN CONST IF ELSE WHILE BREAK CONTINUE PRINTF SCANF
 %token <int_val> INT_CONST
 %token <float_val> FLOAT_CONST
 
@@ -357,6 +357,15 @@ Stmt
 		ast->Name = "PrintfStmt";
 		ast->AST_type = STMT;
 		ast->Stmt_type = Printf;
+		ast->IO = *shared_ptr<string>($3);
+		ast->First_block = move(reinterpret_cast<FuncPrototype*>$5->Params);
+		$$ = ast;
+	}
+	| SCANF '(' STRING ',' FuncRParams ')' ';' {
+		auto ast = new Stmt();
+		ast->Name = "ScanfStmt";
+		ast->AST_type = STMT;
+		ast->Stmt_type = Scanf;
 		ast->IO = *shared_ptr<string>($3);
 		ast->First_block = move(reinterpret_cast<FuncPrototype*>$5->Params);
 		$$ = ast;

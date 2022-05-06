@@ -76,6 +76,10 @@ private:
 public:
     explicit gen(const string& name);
     void ProgramGen(shared_ptr<CompUnit> &program);
+
+    void PrintfGen(shared_ptr<Stmt> &StmtUnit);
+
+    void ScanfGen(shared_ptr<Stmt> &StmtUnit);
 };
 
 
