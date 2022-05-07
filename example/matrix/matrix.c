@@ -63,7 +63,7 @@ int main() {
     while (i < n1) {
         j = 0;
         while (j < m2) {
-            printf("%10d ", C[i*m2+j]);
+            printf("%10d", C[i*m2+j]);
             j = j + 1;
         }
         printf("\n");
