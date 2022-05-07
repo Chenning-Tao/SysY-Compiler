@@ -533,7 +533,15 @@ FuncRParams_Wrap
 
 MulExp
 	: UnaryExp { $$ = $1; }
-	| MulExp '*' UnaryExp { }
+	| MulExp '*' UnaryExp { 
+		auto ast = new Exp();
+		ast->AST_type = EXP;
+		ast->Name = "MulExp";
+		ast->Left_exp = shared_ptr<BaseAST>($1);
+		ast->Right_exp = shared_ptr<BaseAST>($3);
+		ast->Operator = "*";
+		$$ = ast;
+	}
 	| MulExp '/' UnaryExp { }
 	| MulExp '%' UnaryExp { }
 	;

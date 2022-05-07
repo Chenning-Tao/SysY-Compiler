@@ -211,6 +211,9 @@ void gen::ScanfGen(shared_ptr<Stmt> &StmtUnit) {
 void gen::PrintfGen(shared_ptr<Stmt> &StmtUnit) {
     Function *CalleeF = GenModule->getFunction("printf");
     vector<Value *> ArgValues;
+    // replace \n with ascii 10
+    while(StmtUnit->IO.find("\\n") != string::npos) 
+        StmtUnit->IO.replace(StmtUnit->IO.find("\\n"), 2, string(1, toascii(10)));
     auto *FormatStrInst = GenBuilder->CreateGlobalStringPtr(StmtUnit->IO, "printf_format_str");
     ArgValues.push_back(FormatStrInst);
 
