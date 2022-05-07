@@ -40,7 +40,7 @@ extern int yylineno;
 %token <float_val> FLOAT_CONST
 
 // none terminal type
-%type <ast_val> FuncFParams FuncFParam Exp_Wrap FuncRParams LVal LOrExp LAndExp EqExp RelExp Cond AddExp MulExp PrimaryExp UnaryExp Exp FuncDef FuncType Block Stmt Decl CompUnit ConstDecl VarDecl BType ConstDef BlockItem_Wrap BlockItem VarDef Number InitVal
+%type <ast_val> FuncFParams_Wrap FuncRParams_Wrap FuncFParams FuncFParam Exp_Wrap FuncRParams LVal LOrExp LAndExp EqExp RelExp Cond AddExp MulExp PrimaryExp UnaryExp Exp FuncDef FuncType Block Stmt Decl CompUnit ConstDecl VarDecl BType ConstDef BlockItem_Wrap BlockItem VarDef Number InitVal
 
 %%
 
@@ -257,12 +257,20 @@ FuncType
 
 FuncFParams
 	: FuncFParam { $$ = $1; }
-	| FuncFParam FuncFParams_Wrap { }
+	| FuncFParam FuncFParams_Wrap { 
+		auto ast = reinterpret_cast<FuncPrototype*>$2;
+		ast->Params.insert(ast->Params.begin(), shared_ptr<BaseAST>($1));
+		$$ = ast;
+	}
 	;
 
 FuncFParams_Wrap
-	: ',' FuncFParam { }
-	| ',' FuncFParam FuncFParams_Wrap { }
+	: ',' FuncFParam { $$ = $2; }
+	| ',' FuncFParam FuncFParams_Wrap { 
+		auto ast = reinterpret_cast<FuncPrototype*>$3;
+		ast->Params.insert(ast->Params.begin(), shared_ptr<BaseAST>($2));
+		$$ = ast;
+	}
 	;
 
 FuncFParam
@@ -487,7 +495,7 @@ UnaryExp
 		ast->Params = move(reinterpret_cast<FuncPrototype*>$3->Params);
 		$$ = ast;
 	}
-	| UnaryOp UnaryExp
+	| UnaryOp UnaryExp {}
 	;
 
 UnaryOp
@@ -503,12 +511,25 @@ FuncRParams
 		ast->Params.push_back(shared_ptr<BaseAST>($1));
 		$$ = ast;
 	}
-	| Exp FuncRParams_Wrap { }
+	| Exp FuncRParams_Wrap { 
+		auto ast = reinterpret_cast<FuncPrototype*>$2;
+		ast->Params.insert(ast->Params.begin(), shared_ptr<BaseAST>($1));
+		$$ = ast;
+	}
 	;
 
 FuncRParams_Wrap
-	: ',' Exp { }
-	| ',' Exp FuncRParams_Wrap { }
+	: ',' Exp { 
+		auto ast = new FuncPrototype();
+		ast->AST_type = FUNCPROTO;
+		ast->Params.push_back(shared_ptr<BaseAST>($2));
+		$$ = ast;
+	}
+	| ',' Exp FuncRParams_Wrap { 
+		auto ast = reinterpret_cast<FuncPrototype*>$3;
+		ast->Params.insert(ast->Params.begin(), shared_ptr<BaseAST>($2));
+		$$ = ast;
+	}
 
 MulExp
 	: UnaryExp { $$ = $1; }

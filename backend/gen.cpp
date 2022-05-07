@@ -215,8 +215,12 @@ void gen::PrintfGen(shared_ptr<Stmt> &StmtUnit) {
     ArgValues.push_back(FormatStrInst);
 
     if (!StmtUnit->First_block.empty()) {
-        for(auto & i : StmtUnit->First_block)
-            ArgValues.push_back(ValueGen(i));
+        for(auto & i : StmtUnit->First_block){
+            Value *Val = ValueGen(i);
+            if (Val->getType()->isFloatTy())
+                Val = GenBuilder->CreateFPExt(Val, Type::getDoubleTy(*GenContext));
+            ArgValues.push_back(Val);
+        }
     }
     GenBuilder->CreateCall(CalleeF, ArgValues, "c_printf");
 }

@@ -73,13 +73,11 @@ private:
     void DeclGen(shared_ptr<BaseAST> &Block, vector<std::string> &removeList);
     void FuncGen(shared_ptr<BaseAST> &Unit);
     void StmtGen(Function *F, shared_ptr<BaseAST> &Block);
+    void PrintfGen(shared_ptr<Stmt> &StmtUnit);
+    void ScanfGen(shared_ptr<Stmt> &StmtUnit);
 public:
     explicit gen(const string& name);
     void ProgramGen(shared_ptr<CompUnit> &program);
-
-    void PrintfGen(shared_ptr<Stmt> &StmtUnit);
-
-    void ScanfGen(shared_ptr<Stmt> &StmtUnit);
 };
 
 
