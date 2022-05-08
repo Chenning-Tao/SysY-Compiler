@@ -179,9 +179,13 @@ void gen::StmtGen(Function *F, shared_ptr<BaseAST> &Block) {
     shared_ptr<Stmt> StmtUnit(reinterpret_pointer_cast<Stmt>(Block));
     if (StmtUnit->Stmt_type == If) IfGen(F, StmtUnit);
     else if (StmtUnit->Stmt_type == While) WhileGen(F, StmtUnit);
-    else if (StmtUnit->Stmt_type == Assign) AssignGen(StmtUnit);
-    else if (StmtUnit->Stmt_type == Return){
-        if (StmtUnit->RVal == nullptr) GenBuilder->CreateRetVoid();
+    else if(StmtUnit->Stmt_type == Assign) AssignGen(StmtUnit);
+    // else if(StmtUnit->Stmt_type == Break){
+    // }
+    // else if(StmtUnit->Stmt_type == Continue){
+    // }
+    else if(StmtUnit->Stmt_type == Return){
+        if(StmtUnit->RVal == nullptr) GenBuilder->CreateRetVoid();
         else GenBuilder->CreateRet(ValueGen(StmtUnit->RVal));
     }
     else if (StmtUnit->Stmt_type == Printf) PrintfGen(StmtUnit);
@@ -227,6 +231,8 @@ void gen::PrintfGen(shared_ptr<Stmt> &StmtUnit) {
     }
     GenBuilder->CreateCall(CalleeF, ArgValues, "c_printf");
 }
+
+// void gen::StmtBr(Function *F, shared_ptr<BaseAST> &Block) {}
 
 void gen::AssignGen(shared_ptr<Stmt> &StmtUnit) {
     shared_ptr<Variable> VarUnit(reinterpret_pointer_cast<Variable>(StmtUnit->LVal));
@@ -291,7 +297,8 @@ void gen::IfGen(Function *F, shared_ptr<Stmt> &StmtUnit) {
 
 }
 
-// While CodeGen
+// CodeGen of "while" 
+// continue和break在while中实现
 void gen::WhileGen(Function *F, shared_ptr<Stmt> &StmtUnit) {
 
     BasicBlock *loopBB = createBB(F, "loop");
@@ -307,7 +314,18 @@ void gen::WhileGen(Function *F, shared_ptr<Stmt> &StmtUnit) {
     std::vector<std::string> removeList;
     for(auto &true_block : StmtUnit->First_block){
         if(true_block->AST_type == DECL) DeclGen(true_block, removeList);
-        else if(true_block->AST_type == STMT) StmtGen(F, true_block);
+        else if(true_block->AST_type == STMT) {
+            shared_ptr<Stmt> stmtPtr(reinterpret_pointer_cast<Stmt>(true_block));
+            if(stmtPtr->Stmt_type == Break){
+                NamedValues.remove(removeList);
+                GenBuilder->CreateBr(endLoopBB);
+            }
+            else if(stmtPtr->Stmt_type == Continue) {
+                NamedValues.remove(removeList);
+                GenBuilder->CreateBr(loopBB);
+            }
+            StmtGen(F, true_block);
+        }
     }
     NamedValues.remove(removeList);
     EndCond = ConditionGen(StmtUnit->Condition);

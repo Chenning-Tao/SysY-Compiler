@@ -401,8 +401,22 @@ Stmt
 		$$ = ast;
 	
 	}
-	| BREAK ';' { }
-	| CONTINUE ';' { }
+	| BREAK ';' { 
+		auto ast = new Stmt();
+		ast->Name = "BreakStmt";
+		ast->AST_type = STMT;
+		ast->Stmt_type = Break;
+		ast->RVal = nullptr;
+		$$ = ast;
+	}
+	| CONTINUE ';' {
+		auto ast = new Stmt();
+		ast->Name = "ContinueStmt";
+		ast->AST_type = STMT;
+		ast->Stmt_type = Continue;
+		ast->RVal = nullptr;
+		$$ = ast;
+	 }
 	| RETURN Exp ';' { 
 		auto ast = new Stmt();
 		ast->Name = "ReturnStmt";
