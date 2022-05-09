@@ -290,6 +290,13 @@ void gen::IfGen(Function *F, shared_ptr<Stmt> &StmtUnit) {
 
     // condition = false
     GenBuilder->SetInsertPoint(ElseBB);
+    if (!StmtUnit->Second_block.empty()) {
+        for(auto & false_block : StmtUnit->Second_block){
+            if(false_block->AST_type == DECL) DeclGen(false_block, removeList);
+            else if(false_block->AST_type == STMT) StmtGen(F, false_block);
+        }
+        NamedValues.remove(removeList);
+    }
     GenBuilder->CreateBr(MergeBB);
 
     // merge

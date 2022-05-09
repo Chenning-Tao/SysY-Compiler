@@ -387,11 +387,20 @@ Stmt
 		ast->Stmt_type = If;
 		ast->Condition = shared_ptr<BaseAST>($3);
 		ast->First_block = move(reinterpret_cast<Func*>$5->Blocks);
+		ast->Second_block = vector<shared_ptr<BaseAST>>();
 		$$ = ast;
 	}
-	| IF '(' Cond ')' Stmt ELSE Stmt { }
+	| IF '(' Cond ')' Stmt ELSE Stmt { 
+		auto ast = new Stmt();
+		ast->Name = "IfElseStmt";
+		ast->AST_type = STMT;
+		ast->Stmt_type = If;
+		ast->Condition = shared_ptr<BaseAST>($3);
+		ast->First_block = move(reinterpret_cast<Func*>$5->Blocks);
+		ast->Second_block = move(reinterpret_cast<Func*>$7->Blocks);
+		$$ = ast;
+	}
 	| WHILE '(' Cond ')' Stmt { 
-	// $$ = newast5(maketext("Stmt"), $1,$2,$3,$4,$5);
 		auto ast = new Stmt();
 		ast->Name = "WhileStmt";
 		ast->AST_type = STMT;
