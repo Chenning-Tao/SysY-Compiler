@@ -179,9 +179,13 @@ void gen::StmtGen(Function *F, shared_ptr<BaseAST> &Block) {
     shared_ptr<Stmt> StmtUnit(reinterpret_pointer_cast<Stmt>(Block));
     if (StmtUnit->Stmt_type == If) IfGen(F, StmtUnit);
     else if (StmtUnit->Stmt_type == While) WhileGen(F, StmtUnit);
-    else if (StmtUnit->Stmt_type == Assign) AssignGen(StmtUnit);
-    else if (StmtUnit->Stmt_type == Return){
-        if (StmtUnit->RVal == nullptr) GenBuilder->CreateRetVoid();
+    else if(StmtUnit->Stmt_type == Assign) AssignGen(StmtUnit);
+    // else if(StmtUnit->Stmt_type == Break){
+    // }
+    // else if(StmtUnit->Stmt_type == Continue){
+    // }
+    else if(StmtUnit->Stmt_type == Return){
+        if(StmtUnit->RVal == nullptr) GenBuilder->CreateRetVoid();
         else GenBuilder->CreateRet(ValueGen(StmtUnit->RVal));
     }
     else if (StmtUnit->Stmt_type == Printf) PrintfGen(StmtUnit);
@@ -211,15 +215,24 @@ void gen::ScanfGen(shared_ptr<Stmt> &StmtUnit) {
 void gen::PrintfGen(shared_ptr<Stmt> &StmtUnit) {
     Function *CalleeF = GenModule->getFunction("printf");
     vector<Value *> ArgValues;
+    // replace \n with ascii 10
+    while(StmtUnit->IO.find("\\n") != string::npos) 
+        StmtUnit->IO.replace(StmtUnit->IO.find("\\n"), 2, string(1, toascii(10)));
     auto *FormatStrInst = GenBuilder->CreateGlobalStringPtr(StmtUnit->IO, "printf_format_str");
     ArgValues.push_back(FormatStrInst);
 
     if (!StmtUnit->First_block.empty()) {
-        for(auto & i : StmtUnit->First_block)
-            ArgValues.push_back(ValueGen(i));
+        for(auto & i : StmtUnit->First_block){
+            Value *Val = ValueGen(i);
+            if (Val->getType()->isFloatTy())
+                Val = GenBuilder->CreateFPExt(Val, Type::getDoubleTy(*GenContext));
+            ArgValues.push_back(Val);
+        }
     }
     GenBuilder->CreateCall(CalleeF, ArgValues, "c_printf");
 }
+
+// void gen::StmtBr(Function *F, shared_ptr<BaseAST> &Block) {}
 
 void gen::AssignGen(shared_ptr<Stmt> &StmtUnit) {
     shared_ptr<Variable> VarUnit(reinterpret_pointer_cast<Variable>(StmtUnit->LVal));
@@ -277,6 +290,13 @@ void gen::IfGen(Function *F, shared_ptr<Stmt> &StmtUnit) {
 
     // condition = false
     GenBuilder->SetInsertPoint(ElseBB);
+    if (!StmtUnit->Second_block.empty()) {
+        for(auto & false_block : StmtUnit->Second_block){
+            if(false_block->AST_type == DECL) DeclGen(false_block, removeList);
+            else if(false_block->AST_type == STMT) StmtGen(F, false_block);
+        }
+        NamedValues.remove(removeList);
+    }
     GenBuilder->CreateBr(MergeBB);
 
     // merge
@@ -284,7 +304,8 @@ void gen::IfGen(Function *F, shared_ptr<Stmt> &StmtUnit) {
 
 }
 
-// While CodeGen
+// CodeGen of "while" 
+// continue和break在while中实现
 void gen::WhileGen(Function *F, shared_ptr<Stmt> &StmtUnit) {
 
     BasicBlock *loopBB = createBB(F, "loop");
@@ -300,7 +321,18 @@ void gen::WhileGen(Function *F, shared_ptr<Stmt> &StmtUnit) {
     std::vector<std::string> removeList;
     for(auto &true_block : StmtUnit->First_block){
         if(true_block->AST_type == DECL) DeclGen(true_block, removeList);
-        else if(true_block->AST_type == STMT) StmtGen(F, true_block);
+        else if(true_block->AST_type == STMT) {
+            shared_ptr<Stmt> stmtPtr(reinterpret_pointer_cast<Stmt>(true_block));
+            if(stmtPtr->Stmt_type == Break){
+                NamedValues.remove(removeList);
+                GenBuilder->CreateBr(endLoopBB);
+            }
+            else if(stmtPtr->Stmt_type == Continue) {
+                NamedValues.remove(removeList);
+                GenBuilder->CreateBr(loopBB);
+            }
+            StmtGen(F, true_block);
+        }
     }
     NamedValues.remove(removeList);
     EndCond = ConditionGen(StmtUnit->Condition);
