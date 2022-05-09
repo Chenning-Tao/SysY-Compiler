@@ -391,6 +391,18 @@ Value *gen::ConditionGen(shared_ptr<BaseAST> &input) {
         if (is_float) return GenBuilder->CreateFCmpOLT(L, R, "cond");
         else return GenBuilder->CreateICmpULT(L, R, "cond");
     }
+    else if (condition->Operator == ">") {
+        if (is_float) return GenBuilder->CreateFCmpOGT(L, R, "cond");
+        else return GenBuilder->CreateICmpUGT(L, R, "cond");
+    }
+    else if (condition->Operator == "<=") {
+        if (is_float) return GenBuilder->CreateFCmpOLE(L, R, "cond");
+        else return GenBuilder->CreateICmpULE(L, R, "cond");
+    }
+    else if (condition->Operator == ">=") {
+        if (is_float) return GenBuilder->CreateFCmpOGE(L, R, "cond");
+        else return GenBuilder->CreateICmpUGE(L, R, "cond");
+    }
 }
 
 Value *gen::ValueGen(shared_ptr<BaseAST> &input) {

@@ -565,7 +565,6 @@ MulExp
 		ast->Operator = "*";
 		$$ = ast;
 	}
-<<<<<<< HEAD
 	| MulExp '/' UnaryExp { 
 		auto ast = new Exp();
 		ast->AST_type = EXP;
@@ -584,10 +583,6 @@ MulExp
 		ast->Operator = "%";
 		$$ = ast;
 	}
-=======
-	| MulExp '/' UnaryExp { }
-	| MulExp '%' UnaryExp { }
->>>>>>> 68987cd84f4d51972a30c01c269f0278c10379a7
 	;
 
 AddExp
