@@ -100,12 +100,12 @@ ConstDecl
 	;
 
 BType
-	: INT { 
+	: INT {
 		auto ast = new Decl();
 		ast->Decl_type = Int;
 		$$ = ast;
 	}
-	| FLOAT { 
+	| FLOAT {
 		auto ast = new Decl();
 		ast->Decl_type = Float;
 		$$ = ast;
@@ -512,9 +512,33 @@ FuncRParams_Wrap
 
 MulExp
 	: UnaryExp { $$ = $1; }
-	| MulExp '*' UnaryExp { }
-	| MulExp '/' UnaryExp { }
-	| MulExp '%' UnaryExp { }
+	| MulExp '*' UnaryExp { 
+		auto ast = new Exp();
+		ast->AST_type = EXP;
+		ast->Name = "MulExp";
+		ast->Left_exp = shared_ptr<BaseAST>($1);
+		ast->Right_exp = shared_ptr<BaseAST>($3);
+		ast->Operator = "*";
+		$$ = ast;
+	}
+	| MulExp '/' UnaryExp { 
+		auto ast = new Exp();
+		ast->AST_type = EXP;
+		ast->Name = "MulExp";
+		ast->Left_exp = shared_ptr<BaseAST>($1);
+		ast->Right_exp = shared_ptr<BaseAST>($3);
+		ast->Operator = "/";
+		$$ = ast;
+	}
+	| MulExp '%' UnaryExp { 
+		auto ast = new Exp();
+		ast->AST_type = EXP;
+		ast->Name = "MulExp";
+		ast->Left_exp = shared_ptr<BaseAST>($1);
+		ast->Right_exp = shared_ptr<BaseAST>($3);
+		ast->Operator = "%";
+		$$ = ast;
+	}
 	;
 
 AddExp
@@ -528,7 +552,15 @@ AddExp
 		ast->Operator = "+";
 		$$ = ast;
 	}
-	| AddExp '-' MulExp { }
+	| AddExp '-' MulExp { 
+		auto ast = new Exp();
+		ast->AST_type = EXP;
+		ast->Name = "AddExp";
+		ast->Left_exp = shared_ptr<BaseAST>($1);
+		ast->Right_exp = shared_ptr<BaseAST>($3);
+		ast->Operator = "-";
+		$$ = ast;
+	}
 	;
 
 RelExp
@@ -542,9 +574,33 @@ RelExp
 		ast->Right_exp = shared_ptr<BaseAST>($3);
 		$$ = ast;
 	}
-	| RelExp '>' AddExp { }
-	| RelExp '<' '=' AddExp { }
-	| RelExp '>' '=' AddExp { }
+	| RelExp '>' AddExp { 
+		auto ast = new Exp();
+		ast->AST_type = EXP;
+		ast->Name = "RelExp";
+		ast->Left_exp = shared_ptr<BaseAST>($1);
+		ast->Operator = ">";
+		ast->Right_exp = shared_ptr<BaseAST>($3);
+		$$ = ast;
+	}
+	| RelExp '<' '=' AddExp { 
+		auto ast = new Exp();
+		ast->AST_type = EXP;
+		ast->Name = "RelExp";
+		ast->Left_exp = shared_ptr<BaseAST>($1);
+		ast->Operator = "<=";
+		ast->Right_exp = shared_ptr<BaseAST>($4);
+		$$ = ast;
+	}
+	| RelExp '>' '=' AddExp { 
+		auto ast = new Exp();
+		ast->AST_type = EXP;
+		ast->Name = "RelExp";
+		ast->Left_exp = shared_ptr<BaseAST>($1);
+		ast->Operator = ">=";
+		ast->Right_exp = shared_ptr<BaseAST>($4);
+		$$ = ast;
+	}
 	;
 
 EqExp
@@ -571,12 +627,28 @@ EqExp
 
 LAndExp
 	: EqExp { $$ = $1; }
-	| LAndExp '&' '&' EqExp { }
+	| LAndExp '&' '&' EqExp { 
+		auto ast = new Exp();
+		ast->AST_type = EXP;
+		ast->Name = "LAndExp";
+		ast->Left_exp = shared_ptr<BaseAST>($1);
+		ast->Operator = "&&";
+		ast->Right_exp = shared_ptr<BaseAST>($4);
+		$$ = ast;
+	}
 	;
 
 LOrExp
 	: LAndExp { $$ = $1; }
-	| LOrExp '|' '|' LAndExp { }
+	| LOrExp '|' '|' LAndExp { 
+		auto ast = new Exp();
+		ast->AST_type = EXP;
+		ast->Name = "LOrExp";
+		ast->Left_exp = shared_ptr<BaseAST>($1);
+		ast->Operator = "||";
+		ast->Right_exp = shared_ptr<BaseAST>($4);
+		$$ = ast;
+	}
 	;
 
 %%
