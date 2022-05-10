@@ -68,6 +68,7 @@ private:
     bool FloatGen(Value *&L, Value *&R);
     void AssignGen(shared_ptr<Stmt> &StmtUnit);
     void IfGen(Function *F, shared_ptr<Stmt> &StmtUnit);
+    void IfGen(Function *F, shared_ptr<Stmt> &StmtUnit, BasicBlock *loopBB, BasicBlock *endLoopBB);
     void WhileGen(Function *F, shared_ptr<Stmt> &StmtUnit);
     void GlobalVarGen(shared_ptr<BaseAST> &Unit);
     void DeclGen(shared_ptr<BaseAST> &Block, vector<std::string> &removeList);
