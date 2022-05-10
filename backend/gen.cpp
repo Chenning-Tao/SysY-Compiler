@@ -175,15 +175,12 @@ void gen::DeclGen(shared_ptr<BaseAST> &Block, vector<std::string> &removeList) {
     removeList.push_back(VarUnit->Var_name);
 }
 
+// if StmtGen is changed, please change related code in WhileGen 
 void gen::StmtGen(Function *F, shared_ptr<BaseAST> &Block) {
     shared_ptr<Stmt> StmtUnit(reinterpret_pointer_cast<Stmt>(Block));
     if (StmtUnit->Stmt_type == If) IfGen(F, StmtUnit);
     else if (StmtUnit->Stmt_type == While) WhileGen(F, StmtUnit);
     else if(StmtUnit->Stmt_type == Assign) AssignGen(StmtUnit);
-    // else if(StmtUnit->Stmt_type == Break){
-    // }
-    // else if(StmtUnit->Stmt_type == Continue){
-    // }
     else if(StmtUnit->Stmt_type == Return){
         if(StmtUnit->RVal == nullptr) GenBuilder->CreateRetVoid();
         else GenBuilder->CreateRet(ValueGen(StmtUnit->RVal));
@@ -304,13 +301,102 @@ void gen::IfGen(Function *F, shared_ptr<Stmt> &StmtUnit) {
 
 }
 
-// CodeGen of "while" 
-// continue和break在while中实现
-void gen::WhileGen(Function *F, shared_ptr<Stmt> &StmtUnit) {
+// IfGen used in While
+void gen::IfGen(Function *F, shared_ptr<Stmt> &StmtUnit, BasicBlock *loopBB, BasicBlock *endLoopBB) {
+    BasicBlock *ifBB = createBB(F, "if");
+    BasicBlock *elseBB = createBB(F, "else");
+    BasicBlock *mergeBB = createBB(F, "merge");
+    // BasicBlock *endBB = createBB(F, "endif");
+    bool is_break_if = false;
+    bool is_break_else = false;
 
+
+    // condition generation
+    Value *ifcond = ConditionGen(StmtUnit->Condition);
+    GenBuilder->CreateCondBr(ifcond, ifBB, elseBB);
+
+    // condition = true
+    GenBuilder->SetInsertPoint(ifBB);
+    std::vector<std::string> removeList;
+    for(auto &true_block : StmtUnit->First_block){
+        if(true_block->AST_type == DECL) DeclGen(true_block, removeList);
+        else if(true_block->AST_type == STMT) {
+            //StmtGen: true_block
+            shared_ptr<Stmt> StmtFirst(reinterpret_pointer_cast<Stmt>(true_block));
+            if (StmtFirst->Stmt_type == If) IfGen(F, StmtFirst, loopBB, endLoopBB);
+            else if (StmtFirst->Stmt_type == While) WhileGen(F, StmtFirst);
+            else if (StmtFirst->Stmt_type == Break) {
+                is_break_if = true;
+                //GenBuilder->CreateBr(endLoopBB);
+                break;
+            }
+            else if (StmtFirst->Stmt_type == Assign) AssignGen(StmtFirst);
+            else if (StmtFirst->Stmt_type == Return){
+                if(StmtFirst->RVal == nullptr) GenBuilder->CreateRetVoid();
+                else GenBuilder->CreateRet(ValueGen(StmtFirst->RVal));
+            }
+            else if (StmtFirst->Stmt_type == Printf) PrintfGen(StmtFirst);
+            else if (StmtFirst->Stmt_type == Scanf) ScanfGen(StmtFirst);
+        }
+    }
+    NamedValues.remove(removeList);
+    
+    if(!is_break_if)
+        GenBuilder->CreateBr(mergeBB);
+    else 
+        GenBuilder->CreateBr(endLoopBB);
+
+    // condition = false
+    GenBuilder->SetInsertPoint(elseBB);
+    if (!StmtUnit->Second_block.empty()) {
+        for(auto & false_block : StmtUnit->Second_block){
+            if(false_block->AST_type == DECL) DeclGen(false_block, removeList);
+            else if(false_block->AST_type == STMT) {
+            //StmtGen: false_block
+            shared_ptr<Stmt> StmtSecond(reinterpret_pointer_cast<Stmt>(false_block));
+            if (StmtSecond->Stmt_type == If) IfGen(F, StmtSecond, loopBB, endLoopBB);
+            else if (StmtSecond->Stmt_type == While) WhileGen(F, StmtSecond);
+            else if (StmtSecond->Stmt_type == Break) {
+                is_break_else = true;
+                // GenBuilder->CreateBr(endLoopBB);
+                break;
+            }
+            else if (StmtSecond->Stmt_type == Assign) AssignGen(StmtSecond);
+            else if (StmtSecond->Stmt_type == Return){
+                if(StmtSecond->RVal == nullptr) GenBuilder->CreateRetVoid();
+                else GenBuilder->CreateRet(ValueGen(StmtSecond->RVal));
+            }
+            else if (StmtSecond->Stmt_type == Printf) PrintfGen(StmtSecond);
+            else if (StmtSecond->Stmt_type == Scanf) ScanfGen(StmtSecond);
+            }
+        }
+        // GenBuilder->CreateBr(MergeBB);
+        NamedValues.remove(removeList);
+    }
+    if(!is_break_else)
+        GenBuilder->CreateBr(mergeBB);
+    else 
+        GenBuilder->CreateBr(endLoopBB);
+    // merge
+    GenBuilder->SetInsertPoint(mergeBB);
+    // if (is_break) {
+        
+    // }    
+    
+    // // endif
+    // GenBuilder->SetInsertPoint(endBB);
+    
+}
+
+// CodeGen of "while" -> 在while中的if中实现continue和break
+void gen::WhileGen(Function *F, shared_ptr<Stmt> &StmtUnit) {
+    
+    // BasicBlock *entryBB = createBB(F, "entry");
     BasicBlock *loopBB = createBB(F, "loop");
     BasicBlock *endLoopBB = createBB(F, "endLoop");
+    // BasicBlock *endWhileBB = createBB(F, "endWhile");
 
+    // GenBuilder->SetInsertPoint(entryBB);
     // condition generation
     Value *EndCond = ConditionGen(StmtUnit->Condition);
     // 根据EndCond判断是否跳转
@@ -322,24 +408,27 @@ void gen::WhileGen(Function *F, shared_ptr<Stmt> &StmtUnit) {
     for(auto &true_block : StmtUnit->First_block){
         if(true_block->AST_type == DECL) DeclGen(true_block, removeList);
         else if(true_block->AST_type == STMT) {
-            shared_ptr<Stmt> stmtPtr(reinterpret_pointer_cast<Stmt>(true_block));
-            if(stmtPtr->Stmt_type == Break){
-                NamedValues.remove(removeList);
-                GenBuilder->CreateBr(endLoopBB);
+            // StmtGen(F, true_block);
+            shared_ptr<Stmt> StmtWhile(reinterpret_pointer_cast<Stmt>(true_block));
+            if (StmtWhile->Stmt_type == If) IfGen(F, StmtWhile, loopBB, endLoopBB);
+            else if (StmtWhile->Stmt_type == While) WhileGen(F, StmtWhile);
+            else if (StmtWhile->Stmt_type == Assign) AssignGen(StmtWhile);
+            else if (StmtWhile->Stmt_type == Return){
+                if(StmtWhile->RVal == nullptr) GenBuilder->CreateRetVoid();
+                else GenBuilder->CreateRet(ValueGen(StmtWhile->RVal));
             }
-            else if(stmtPtr->Stmt_type == Continue) {
-                NamedValues.remove(removeList);
-                GenBuilder->CreateBr(loopBB);
-            }
-            StmtGen(F, true_block);
+            else if (StmtWhile->Stmt_type == Printf) PrintfGen(StmtWhile);
+            else if (StmtWhile->Stmt_type == Scanf) ScanfGen(StmtWhile);
         }
     }
     NamedValues.remove(removeList);
+    // endLoop or not
     EndCond = ConditionGen(StmtUnit->Condition);
     GenBuilder->CreateCondBr(EndCond, loopBB, endLoopBB);
-
-    // endLoop:
+    
     GenBuilder->SetInsertPoint(endLoopBB);
+    // endWhile:
+    // GenBuilder->SetInsertPoint(endWhileBB);
 }
 
 Value *gen::IntToFloat(Value *InitVal) {
