@@ -586,7 +586,7 @@ bool gen::FloatGen(Value *&L, Value *&R) {
 
 GlobalVariable *gen::createGlob(Type *type, const std::string& name) {
     GenModule->getOrInsertGlobal(name, type);
-    GlobalVariable *gVar = GenModule->getNamedGlobal(name);/home/tcn/Desktop/Project/frontend/parser.y
+    GlobalVariable *gVar = GenModule->getNamedGlobal(name);
     return gVar;
 }
 
