@@ -259,7 +259,7 @@ FuncFParams
 	: FuncFParam { $$ = $1; }
 	| FuncFParam FuncFParams_Wrap { 
 		auto ast = reinterpret_cast<FuncPrototype*>$2;
-		ast->Params.insert(ast->Params.begin(), shared_ptr<BaseAST>($1));
+		ast->Params.insert(ast->Params.begin(), reinterpret_cast<FuncPrototype*>$1->Params[0]);
 		$$ = ast;
 	}
 	;
@@ -268,7 +268,7 @@ FuncFParams_Wrap
 	: ',' FuncFParam { $$ = $2; }
 	| ',' FuncFParam FuncFParams_Wrap { 
 		auto ast = reinterpret_cast<FuncPrototype*>$3;
-		ast->Params.insert(ast->Params.begin(), shared_ptr<BaseAST>($2));
+		ast->Params.insert(ast->Params.begin(), reinterpret_cast<FuncPrototype*>$2->Params[0]);
 		$$ = ast;
 	}
 	;
@@ -378,7 +378,14 @@ Stmt
 		ast->First_block = move(reinterpret_cast<FuncPrototype*>$5->Params);
 		$$ = ast;
 	}
-	| Exp ';'{ }
+	| Exp ';'{ 
+		auto ast = new Stmt();
+		ast->Name = "ExpStmt";
+		ast->AST_type = STMT;
+		ast->Stmt_type = Expression;
+		ast->RVal = shared_ptr<BaseAST>($1);
+		$$ = ast;
+	}
 	| Block { $$ = $1; }
 	| IF '(' Cond ')' Stmt {  
 		auto ast = new Stmt();
@@ -469,7 +476,7 @@ LVal
 	;
 
 PrimaryExp
-	: '(' Exp ')' { }
+	: '(' Exp ')' { $$ = $2;}
 	| LVal { $$ = $1; }
 	| Number { 
 		auto ast = new Exp();

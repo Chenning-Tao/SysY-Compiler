@@ -11,7 +11,7 @@
 using namespace std;
 
 enum type {Int, Float, Void};
-enum stmt {If, While, Break, Continue, Return, Assign, Printf, Scanf};
+enum stmt {If, While, Break, Continue, Return, Assign, Printf, Scanf, Expression};
 enum ast {FUNC, FUNCPROTO, DECL, EXP, FINALEXP, STMT, COMPUNIT, VARIABLE};
 
 static void print_indent(int indent) {

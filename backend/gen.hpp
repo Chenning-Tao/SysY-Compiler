@@ -83,6 +83,8 @@ private:
 public:
     explicit gen(const string& name);
     void ProgramGen(shared_ptr<CompUnit> &program);
+
+    Value *ExpGen(const shared_ptr<BaseAST> &input);
 };
 
 

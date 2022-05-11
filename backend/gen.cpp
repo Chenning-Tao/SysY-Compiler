@@ -140,9 +140,9 @@ void gen::FuncGen(shared_ptr<BaseAST> &Unit) {
     for (auto & Block : FuncUnit->Blocks){
         if (Block->AST_type == STMT) StmtGen(F, Block);
         else if(Block->AST_type == DECL) DeclGen(Block, removeList);
-        else if(Block->AST_type == FUNCPROTO) FuncCallGen(Block);
     }
     NamedValues.remove(removeList);
+    if (Proto->Func_type == Void) GenBuilder->CreateRetVoid();
 }
 
 void gen::DeclGen(shared_ptr<BaseAST> &Block, vector<std::string> &removeList) {
@@ -185,6 +185,7 @@ void gen::StmtGen(Function *F, shared_ptr<BaseAST> &Block) {
         if(StmtUnit->RVal == nullptr) GenBuilder->CreateRetVoid();
         else GenBuilder->CreateRet(ValueGen(StmtUnit->RVal));
     }
+    else if (StmtUnit->Stmt_type == Expression) Value *V = ValueGen(StmtUnit->RVal);
     else if (StmtUnit->Stmt_type == Printf) PrintfGen(StmtUnit);
     else if (StmtUnit->Stmt_type == Scanf) ScanfGen(StmtUnit);
 }
@@ -272,7 +273,7 @@ void gen::IfGen(Function *F, shared_ptr<Stmt> &StmtUnit) {
     BasicBlock *MergeBB = createBB(F, "ifcond");
 
     // condition generation
-    Value *cond = ConditionGen(StmtUnit->Condition);
+    Value *cond = ValueGen(StmtUnit->Condition);
     GenBuilder->CreateCondBr(cond, ThenBB, ElseBB);
 
     // condition = true
@@ -312,7 +313,7 @@ void gen::IfGen(Function *F, shared_ptr<Stmt> &StmtUnit, BasicBlock *loopBB, Bas
 
 
     // condition generation
-    Value *ifcond = ConditionGen(StmtUnit->Condition);
+    Value *ifcond = ValueGen(StmtUnit->Condition);
     GenBuilder->CreateCondBr(ifcond, ifBB, elseBB);
 
     // condition = true
@@ -327,7 +328,6 @@ void gen::IfGen(Function *F, shared_ptr<Stmt> &StmtUnit, BasicBlock *loopBB, Bas
             else if (StmtFirst->Stmt_type == While) WhileGen(F, StmtFirst);
             else if (StmtFirst->Stmt_type == Break) {
                 is_break_if = true;
-                //GenBuilder->CreateBr(endLoopBB);
                 break;
             }
             else if (StmtFirst->Stmt_type == Assign) AssignGen(StmtFirst);
@@ -379,13 +379,6 @@ void gen::IfGen(Function *F, shared_ptr<Stmt> &StmtUnit, BasicBlock *loopBB, Bas
         GenBuilder->CreateBr(endLoopBB);
     // merge
     GenBuilder->SetInsertPoint(mergeBB);
-    // if (is_break) {
-        
-    // }    
-    
-    // // endif
-    // GenBuilder->SetInsertPoint(endBB);
-    
 }
 
 // CodeGen of "while" -> 在while中的if中实现continue和break
@@ -398,7 +391,7 @@ void gen::WhileGen(Function *F, shared_ptr<Stmt> &StmtUnit) {
 
     // GenBuilder->SetInsertPoint(entryBB);
     // condition generation
-    Value *EndCond = ConditionGen(StmtUnit->Condition);
+    Value *EndCond = ValueGen(StmtUnit->Condition);
     // 根据EndCond判断是否跳转
     GenBuilder->CreateCondBr(EndCond, loopBB, endLoopBB);
 
@@ -423,7 +416,7 @@ void gen::WhileGen(Function *F, shared_ptr<Stmt> &StmtUnit) {
     }
     NamedValues.remove(removeList);
     // endLoop or not
-    EndCond = ConditionGen(StmtUnit->Condition);
+    EndCond = ValueGen(StmtUnit->Condition);
     GenBuilder->CreateCondBr(EndCond, loopBB, endLoopBB);
     
     GenBuilder->SetInsertPoint(endLoopBB);
@@ -462,38 +455,6 @@ BasicBlock *gen::createBB(Function *fooFunc, const string &Name) {
     return BasicBlock::Create(*GenContext, Name, fooFunc);
 }
 
-Value *gen::ConditionGen(shared_ptr<BaseAST> &input) {
-    shared_ptr<Exp> condition(reinterpret_pointer_cast<Exp>(input));
-    Value *L = ValueGen(condition->Left_exp);
-    Value *R = ValueGen(condition->Right_exp);
-    bool is_float = FloatGen(L, R);
-    if (condition->Operator == "==") {
-        if (is_float) return GenBuilder->CreateFCmpOEQ(L, R, "ifcond");
-        else return GenBuilder->CreateICmpEQ(L, R, "ifcond");
-    }
-    // TODO: verify
-    else if (condition->Operator == "!="){
-        if (is_float) return GenBuilder->CreateFCmpONE(L, R, "ifcond");
-        else return GenBuilder->CreateICmpNE(L, R, "ifcond");
-    }
-    else if (condition->Operator == "<") {
-        if (is_float) return GenBuilder->CreateFCmpOLT(L, R, "cond");
-        else return GenBuilder->CreateICmpULT(L, R, "cond");
-    }
-    else if (condition->Operator == ">") {
-        if (is_float) return GenBuilder->CreateFCmpOGT(L, R, "cond");
-        else return GenBuilder->CreateICmpUGT(L, R, "cond");
-    }
-    else if (condition->Operator == "<=") {
-        if (is_float) return GenBuilder->CreateFCmpOLE(L, R, "cond");
-        else return GenBuilder->CreateICmpULE(L, R, "cond");
-    }
-    else if (condition->Operator == ">=") {
-        if (is_float) return GenBuilder->CreateFCmpOGE(L, R, "cond");
-        else return GenBuilder->CreateICmpUGE(L, R, "cond");
-    }
-}
-
 Value *gen::ValueGen(shared_ptr<BaseAST> &input) {
     if (input->AST_type == FINALEXP) {
         shared_ptr<FinalExp> expression(reinterpret_pointer_cast<FinalExp>(input));
@@ -516,32 +477,58 @@ Value *gen::ValueGen(shared_ptr<BaseAST> &input) {
         }
     }
     else if (input->AST_type == FUNCPROTO) return FuncCallGen(input);
-    else if (input->AST_type == EXP) {
-        shared_ptr<Exp> expression(reinterpret_pointer_cast<Exp>(input));
-        Value *L = ValueGen(expression->Left_exp);
-        // fake EXP node
-        if (expression->Operator.empty()) return L;
-        Value *R = ValueGen(expression->Right_exp);
-        bool is_float = FloatGen(L, R);
+    else if (input->AST_type == EXP) return ExpGen(input);
+}
 
-        // expression generation
-        if(expression->Operator == "+"){
-            if (is_float) return GenBuilder->CreateFAdd(L, R);
-            else return GenBuilder->CreateAdd(L, R);
-        }
-        else if(expression->Operator == "-"){
-            if (is_float) return GenBuilder->CreateFSub(L, R);
-            else return GenBuilder->CreateSub(L, R);
-        }
-        else if(expression->Operator == "*"){
-            if (is_float) return GenBuilder->CreateFMul(L, R);
-            else return GenBuilder->CreateMul(L, R);
-        }
-        else if(expression->Operator == "/"){
-            if(L->getType()->isFloatTy()) L = GenBuilder->CreateSIToFP(L, Type::getFloatTy(*GenContext));
-            if(R->getType()->isFloatTy()) R = GenBuilder->CreateSIToFP(R, Type::getFloatTy(*GenContext));
-            return GenBuilder->CreateFDiv(L, R);
-        }
+Value *gen::ExpGen(const shared_ptr<BaseAST> &input) {
+    shared_ptr<Exp> expression(reinterpret_pointer_cast<Exp>(input));
+    Value *L = ValueGen(expression->Left_exp);
+    // fake EXP node
+    if (expression->Operator.empty()) return L;
+    Value *R = ValueGen(expression->Right_exp);
+    bool is_float = FloatGen(L, R);
+
+    // expression generation
+    if(expression->Operator == "+"){
+        if (is_float) return GenBuilder->CreateFAdd(L, R);
+        else return GenBuilder->CreateAdd(L, R);
+    }
+    else if(expression->Operator == "-"){
+        if (is_float) return GenBuilder->CreateFSub(L, R);
+        else return GenBuilder->CreateSub(L, R);
+    }
+    else if(expression->Operator == "*"){
+        if (is_float) return GenBuilder->CreateFMul(L, R);
+        else return GenBuilder->CreateMul(L, R);
+    }
+    else if(expression->Operator == "/"){
+        if(L->getType()->isFloatTy()) L = GenBuilder->CreateSIToFP(L, Type::getFloatTy(*GenContext));
+        if(R->getType()->isFloatTy()) R = GenBuilder->CreateSIToFP(R, Type::getFloatTy(*GenContext));
+        return GenBuilder->CreateFDiv(L, R);
+    }
+    else if(expression->Operator == "==") {
+        if (is_float) return GenBuilder->CreateFCmpOEQ(L, R);
+        else return GenBuilder->CreateICmpEQ(L, R );
+    }
+    else if (expression->Operator == "!="){
+        if (is_float) return GenBuilder->CreateFCmpONE(L, R);
+        else return GenBuilder->CreateICmpNE(L, R);
+    }
+    else if (expression->Operator == "<") {
+        if (is_float) return GenBuilder->CreateFCmpOLT(L, R);
+        else return GenBuilder->CreateICmpSLT(L, R);
+    }
+    else if (expression->Operator == ">") {
+        if (is_float) return GenBuilder->CreateFCmpOGT(L, R);
+        else return GenBuilder->CreateICmpSGT(L, R);
+    }
+    else if (expression->Operator == "<=") {
+        if (is_float) return GenBuilder->CreateFCmpOLE(L, R);
+        else return GenBuilder->CreateICmpSLE(L, R);
+    }
+    else if (expression->Operator == ">=") {
+        if (is_float) return GenBuilder->CreateFCmpOGE(L, R);
+        else return GenBuilder->CreateICmpSGE(L, R);
     }
 }
 
@@ -573,13 +560,16 @@ Value *gen::FuncCallGen(shared_ptr<BaseAST> &input) {
                 shared_ptr<Variable> VarUnit(reinterpret_pointer_cast<Variable>(Param));
                 AllocaInst *var = NamedValues.find(VarUnit->Var_name);
                 int dim = NamedValues.array_dim(VarUnit->Var_name);
-                if (dim > 0 && VarUnit->Length.empty())
+                if (var->getAllocatedType()->isPointerTy())
+                    ArgsV.push_back(GenBuilder->CreateLoad(var->getAllocatedType(), var, var->getName().data()));
+                else if (dim > 0 && VarUnit->Length.empty())
                     ArgsV.push_back(GenBuilder->CreateGEP(var->getAllocatedType(), var, ConstantInt::get(*GenContext, APInt(32, 0))));
                 else{
                     shared_ptr<BaseAST> te(reinterpret_pointer_cast<BaseAST>(VarUnit));
                     ArgsV.push_back(ValueGen(te));
                 }
             }
+            else if (Param->AST_type == EXP) ArgsV.push_back(ValueGen(Param));
         }
     }
     return GenBuilder->CreateCall(CalleeF, ArgsV, "calltmp");
@@ -596,7 +586,7 @@ bool gen::FloatGen(Value *&L, Value *&R) {
 
 GlobalVariable *gen::createGlob(Type *type, const std::string& name) {
     GenModule->getOrInsertGlobal(name, type);
-    GlobalVariable *gVar = GenModule->getNamedGlobal(name);
+    GlobalVariable *gVar = GenModule->getNamedGlobal(name);/home/tcn/Desktop/Project/frontend/parser.y
     return gVar;
 }
 

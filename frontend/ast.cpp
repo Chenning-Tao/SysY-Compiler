@@ -34,6 +34,10 @@ void Stmt::print(int indent) const {
             }
             break;
         case While:
+            print_indent(indent);
+            cout << "Condition" << endl;
+            Condition->print(++indent);
+            cout << endl;
             break;
         case Printf:
             break;
