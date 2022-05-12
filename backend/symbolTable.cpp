@@ -4,7 +4,7 @@
 
 #include "symbolTable.hpp"
 
-void symbolTable::insert(const std::string& name, AllocaInst *input, int dim) {
+void symbolTable::insert(const std::string& name, AllocaInst *input, std::vector<std::shared_ptr<BaseAST>>& dim) {
     auto re = table.find(name);
     auto ar = array.find(name);
     // if not in symbol table
@@ -14,7 +14,7 @@ void symbolTable::insert(const std::string& name, AllocaInst *input, int dim) {
         new_stack.push(input);
         table.emplace(name, new_stack);
         // add array length
-        auto array_stack = std::stack<int>();
+        auto array_stack = std::stack<std::vector<std::shared_ptr<BaseAST>>>();
         array_stack.push(dim);
         array.emplace(name, array_stack);
     }
@@ -41,8 +41,8 @@ AllocaInst *symbolTable::find(const std::string& name) {
     return re->second.top();
 }
 
-int symbolTable::array_dim(const std::string &name) {
+vector<shared_ptr<BaseAST>> symbolTable::array_dim(const std::string &name) {
     auto re = array.find(name);
-    if (re == array.end()) return -1;
+    if (re == array.end()) return {};
     return re->second.top();
 }

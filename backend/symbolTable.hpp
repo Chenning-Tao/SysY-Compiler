@@ -8,6 +8,8 @@
 #include <string>
 #include <stack>
 #include <vector>
+#include <memory>
+#include "ast.hpp"
 #include "llvm/IR/Instructions.h"
 
 using namespace llvm;
@@ -16,12 +18,12 @@ class symbolTable {
 private:
     std::unordered_map<std::string, std::stack<AllocaInst *>> table;
     // value indicate array dim, 0 indicate it's not an array
-    std::unordered_map<std::string, std::stack<int>> array;
+    std::unordered_map<std::string, std::stack<std::vector<std::shared_ptr<BaseAST>>>> array;
 public:
-    void insert(const std::string& name, AllocaInst* input, int dim);
+    void insert(const std::string& name, AllocaInst* input, std::vector<std::shared_ptr<BaseAST>> &dim);
     void remove(const std::vector<std::string>& name);
     AllocaInst* find(const std::string& name);
-    int array_dim(const std::string& name);
+    vector<shared_ptr<BaseAST>> array_dim(const std::string& name);
 };
 
 

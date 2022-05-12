@@ -85,6 +85,8 @@ public:
     void ProgramGen(shared_ptr<CompUnit> &program);
 
     Value *ExpGen(const shared_ptr<BaseAST> &input);
+
+    Value *GetArrayIndex(const shared_ptr<Variable> &VarUnit);
 };
 
 

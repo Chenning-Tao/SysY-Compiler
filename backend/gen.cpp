@@ -103,7 +103,7 @@ void gen::FuncGen(shared_ptr<BaseAST> &Unit) {
     // Parameters
     vector<Type*> Para{};
     vector<std::string> ParaNames{};
-    vector<int> ParaDim{};
+    vector<vector<shared_ptr<BaseAST>>> ParaDim{};
     vector<type> ParaType{};
     for (auto & Param : Proto->Params){
         shared_ptr<Decl> decl(reinterpret_pointer_cast<Decl>(Param));
@@ -111,7 +111,7 @@ void gen::FuncGen(shared_ptr<BaseAST> &Unit) {
         ParaNames.push_back(var->Var_name);
         if (var->Length.empty()) Para.push_back(GetType(decl->Decl_type));
         else Para.push_back(GetPtrType(decl->Decl_type));
-        ParaDim.push_back(var->Length.size());
+        ParaDim.push_back(var->Length);
         ParaType.push_back(decl->Decl_type);
     }
 
@@ -129,7 +129,7 @@ void gen::FuncGen(shared_ptr<BaseAST> &Unit) {
     for(auto &Arg : F->args()) {
         Value *a = &Arg;
         AllocaInst *Alloca;
-        if (ParaDim[i] == 0) Alloca = createBlockAlloca(*cur, ParaNames[i], ParaType[i]);
+        if (ParaDim[i].empty()) Alloca = createBlockAlloca(*cur, ParaNames[i], ParaType[i]);
         else Alloca = createBlockPtrAlloca(*cur, ParaNames[i], ParaType[i]);
         NamedValues.insert(ParaNames[i], Alloca, ParaDim[i]);
         GenBuilder->CreateStore(a, Alloca);
@@ -165,13 +165,14 @@ void gen::DeclGen(shared_ptr<BaseAST> &Block, vector<std::string> &removeList) {
     AllocaInst *Alloca;
     if (VarUnit->Length.empty()) Alloca = createBlockAlloca(*cur, VarUnit->Var_name, DeclUnit->Decl_type);
     else {
-        // TODO: add multi dim array
         Value *arraySize = ValueGen(VarUnit->Length[0]);
+        for (int i = 1; i < VarUnit->Length.size(); ++i)
+            arraySize = GenBuilder->CreateMul(arraySize, ValueGen(VarUnit->Length[i]));
         Alloca = createBlockAlloca(*cur, VarUnit->Var_name, DeclUnit->Decl_type, arraySize);
     }
     if (InitVal != nullptr) GenBuilder->CreateStore(InitVal, Alloca);
     // add to symbol table
-    NamedValues.insert(VarUnit->Var_name, Alloca, VarUnit->Length.size());
+    NamedValues.insert(VarUnit->Var_name, Alloca, VarUnit->Length);
     removeList.push_back(VarUnit->Var_name);
 }
 
@@ -202,12 +203,28 @@ void gen::ScanfGen(shared_ptr<Stmt> &StmtUnit) {
                 AllocaInst *var = NamedValues.find(VarUnit->Var_name);
                 if (VarUnit->Length.empty())
                     ArgValues.push_back(GenBuilder->CreateGEP(var->getAllocatedType(), var, ConstantInt::get(*GenContext, APInt(32, 0))));
-                else
-                    ArgValues.push_back(GenBuilder->CreateGEP(var->getAllocatedType(), var, ValueGen(VarUnit->Length[0])));
+                else {
+                    Value *index = GetArrayIndex(VarUnit);
+                    ArgValues.push_back(GenBuilder->CreateGEP(var->getAllocatedType(), var, index));
+                }
             }
         }
     }
     GenBuilder->CreateCall(CalleeF, ArgValues, "c_scanf");
+}
+
+Value *gen::GetArrayIndex(const shared_ptr<Variable> &VarUnit) {
+    Value *index = ValueGen(VarUnit->Length[VarUnit->Length.size() - 1]);
+    vector<shared_ptr<BaseAST>> arrayLength = NamedValues.array_dim(VarUnit->Var_name);
+    cout << "get array" << endl;
+    for(int i = 0; i < VarUnit->Length.size() - 1; ++i){
+        Value *arrayIndex = ValueGen(VarUnit->Length[i]);
+        for(int j = i+1; j < arrayLength.size(); ++j){
+            arrayIndex = GenBuilder->CreateMul(arrayIndex, ValueGen(arrayLength[j]));
+        }
+        index = GenBuilder->CreateAdd(index, arrayIndex);
+    }
+    return index;
 }
 
 void gen::PrintfGen(shared_ptr<Stmt> &StmtUnit) {
@@ -255,15 +272,17 @@ void gen::AssignGen(shared_ptr<Stmt> &StmtUnit) {
 }
 
 Value *gen::GetLocation(const shared_ptr<Variable> &VarUnit, AllocaInst *var) {
+    cout <<"GetLocation" << endl;
     Value *location;
+    Value *index = GetArrayIndex(VarUnit);
     if (var->getAllocatedType()->isPointerTy()){
         Value *st = GenBuilder->CreateLoad(var->getAllocatedType(), var, var->getName().data());
         if (var->getAllocatedType() == GetPtrType(Int))
-            location = GenBuilder->CreateGEP(GetType(Int), st, ValueGen(VarUnit->Length[0]));
+            location = GenBuilder->CreateGEP(GetType(Int), st, index);
         else
-            location = GenBuilder->CreateGEP(GetType(Float), st, ValueGen(VarUnit->Length[0]));
+            location = GenBuilder->CreateGEP(GetType(Float), st, index);
     }
-    else location = GenBuilder->CreateGEP(var->getAllocatedType(), var, ValueGen(VarUnit->Length[0]));
+    else location = GenBuilder->CreateGEP(var->getAllocatedType(), var, index);
     return location;
 }
 
@@ -559,10 +578,10 @@ Value *gen::FuncCallGen(shared_ptr<BaseAST> &input) {
             if (Param->AST_type == VARIABLE){
                 shared_ptr<Variable> VarUnit(reinterpret_pointer_cast<Variable>(Param));
                 AllocaInst *var = NamedValues.find(VarUnit->Var_name);
-                int dim = NamedValues.array_dim(VarUnit->Var_name);
+                vector<shared_ptr<BaseAST>> dim = NamedValues.array_dim(VarUnit->Var_name);
                 if (var->getAllocatedType()->isPointerTy())
                     ArgsV.push_back(GenBuilder->CreateLoad(var->getAllocatedType(), var, var->getName().data()));
-                else if (dim > 0 && VarUnit->Length.empty())
+                else if (!dim.empty() && VarUnit->Length.empty())
                     ArgsV.push_back(GenBuilder->CreateGEP(var->getAllocatedType(), var, ConstantInt::get(*GenContext, APInt(32, 0))));
                 else{
                     shared_ptr<BaseAST> te(reinterpret_pointer_cast<BaseAST>(VarUnit));
