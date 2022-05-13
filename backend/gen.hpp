@@ -20,6 +20,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/TargetSelect.h"
@@ -30,6 +31,7 @@
 #include "llvm/Transforms/Scalar/LoopUnrollPass.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
@@ -50,6 +52,7 @@ private:
     std::unique_ptr<IRBuilder<>> GenBuilder;
     std::unique_ptr<Module> GenModule;
     std::unordered_map<std::string, GlobalVariable *> GlobalValues;
+    std::unique_ptr<legacy::FunctionPassManager> TheFPM;
     symbolTable NamedValues;
 
     BasicBlock *createBB(Function *fooFunc, const std::string& Name);
@@ -64,11 +67,12 @@ private:
     void OutputGen();
     void InitExternalFunction();
     Value *ValueGen(shared_ptr<BaseAST> &input);
-    Value *ConditionGen(shared_ptr<BaseAST> &input);
     Type *GetType(type FuncType);
     Type *GetPtrType(type FuncType);
     type GetFuncType(const AllocaInst *var);
     Value *GetLocation(const shared_ptr<Variable> &VarUnit, AllocaInst *var);
+    Value *ExpGen(const shared_ptr<BaseAST> &input);
+    Value *GetArrayIndex(const shared_ptr<Variable> &VarUnit);
     bool FloatGen(Value *&L, Value *&R);
     void AssignGen(shared_ptr<Stmt> &StmtUnit);
     void IfGen(Function *F, shared_ptr<Stmt> &StmtUnit);
@@ -83,10 +87,6 @@ private:
 public:
     explicit gen(const string& name);
     void ProgramGen(shared_ptr<CompUnit> &program);
-
-    Value *ExpGen(const shared_ptr<BaseAST> &input);
-
-    Value *GetArrayIndex(const shared_ptr<Variable> &VarUnit);
 };
 
 

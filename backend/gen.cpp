@@ -143,6 +143,8 @@ void gen::FuncGen(shared_ptr<BaseAST> &Unit) {
     }
     NamedValues.remove(removeList);
     if (Proto->Func_type == Void) GenBuilder->CreateRetVoid();
+
+    TheFPM->run(*F);
 }
 
 void gen::DeclGen(shared_ptr<BaseAST> &Block, vector<std::string> &removeList) {
@@ -457,6 +459,22 @@ gen::gen(const string& name) {
     GenContext = std::make_unique<LLVMContext>();
     GenModule = std::make_unique<Module>(name, *GenContext);
     GenBuilder = std::make_unique<IRBuilder<>>(*GenContext);
+
+    // Create a new pass manager attached to it.
+    TheFPM = std::make_unique<legacy::FunctionPassManager>(GenModule.get());
+
+    // Do simple "peephole" optimizations and bit-twiddling optzns.
+    TheFPM->add(createInstructionCombiningPass());
+    // Reassociate expressions.
+    TheFPM->add(createReassociatePass());
+    // Eliminate Common SubExpressions.
+    TheFPM->add(createGVNPass());
+    // Simplify the control flow graph (deleting unreachable blocks, etc).
+    TheFPM->add(createCFGSimplificationPass());
+    // Loop unroll.
+    TheFPM->add(createLoopUnrollPass(3));
+
+    TheFPM->doInitialization();
 }
 
 Type *gen::GetType(type FuncType) {
