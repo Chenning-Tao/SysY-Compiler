@@ -1,7 +1,5 @@
-// #include<bits/stdc++.h>
 // using namespace std ;
 // #define MAXN 101
-
 // 用name[N][0]来存长度,name[N][1+]储存信息
 char name[101][101] ;
 //	 id    id_string
@@ -21,9 +19,9 @@ int main() {
 	int cnt = 1 ;
 	scanf("%c", &tmp) ;
 	while(1) {
-		//printf("TMP = %c\n", tmp) ;
-		if ( tmp == '\n' || tmp == '\r')
+		if ( tmp == '\n' || tmp == '\r'){
 			break ;
+		}
 
 		name[cnt][0] = 0 ;
         //记录课程名称string
@@ -88,34 +86,38 @@ int main() {
 
 		tried[cnt] = 1 ;//第cnt节课是不是上过了
 
-//		if ( tmp == '\n' || tmp == '\r' ) {
-//			tried[cnt] = 0 ;
-//		} else {
-			if (tmp = 'A'){
-				score[cnt] = 4 ;
-				scanf("%c", &tmp) ;
-			}
-			if (tmp = 'B'){
+		if (tmp == 'A'){
+			score[cnt] = 4 ;
+			scanf("%c", &tmp) ;
+		}
+		else {
+			if (tmp == 'B'){
 				score[cnt] = 3 ;
 				scanf("%c", &tmp) ;
 			}
-			if (tmp = 'C'){
-				score[cnt] = 2 ;
-				scanf("%c", &tmp) ;
+			else {
+				if (tmp == 'C'){
+					score[cnt] = 2 ;
+					scanf("%c", &tmp) ;
+				}
+				else {
+					if (tmp == 'D'){
+						score[cnt] = 1 ;
+						scanf("%c", &tmp) ;
+					}
+					else{
+						if (tmp == 'F'){
+							score[cnt] = 0 ;
+							scanf("%c", &tmp) ;
+						}
+						else {
+							tried[cnt] = 0 ;
+							score[cnt] = 0 ;
+						}
+					}
+				}
 			}
-			if (tmp = 'D'){
-				score[cnt] = 1 ;
-				scanf("%c", &tmp) ;
-			}
-			if (tmp = 'F'){
-				score[cnt] = 0 ;
-				scanf("%c", &tmp) ;
-			}
-			if (tmp != 'A' && tmp != 'B' && tmp != 'C' && tmp != 'D' && tmp != 'F'){
-				tried[cnt] = 0 ;
-				score[cnt] = 0 ;
-			}
-//		}
+		}
 
 		gratuate_credit = gratuate_credit + credit[cnt] ;
 		if (tried[cnt]) {
