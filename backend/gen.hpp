@@ -56,13 +56,11 @@ private:
     symbolTable NamedValues;
 
     BasicBlock *createBB(Function *fooFunc, const std::string& Name);
-    GlobalVariable *createGlob(Type *type, const std::string& name);
     AllocaInst *createBlockAlloca(BasicBlock &block, const string &VarName, type VarType);
     AllocaInst *createBlockPtrAlloca(BasicBlock &block, const string &VarName, type VarType);
     AllocaInst *createBlockAlloca(BasicBlock &block, const string &VarName, type VarType, Value* ArraySize);
     Value *IntToFloat(Value *input);
     Value *FloatToInt(Value *InitVal);
-
     Value *FuncCallGen(shared_ptr<BaseAST> &input);
     void OutputGen();
     void InitExternalFunction();
@@ -70,9 +68,13 @@ private:
     Type *GetType(type FuncType);
     Type *GetPtrType(type FuncType);
     type GetFuncType(const AllocaInst *var);
+    type GetFuncType(const GlobalVariable *var);
+    type GetFuncType(const Value *var);
+    Value *GetArraySize(shared_ptr<Variable> &VarUnit);
     Value *GetLocation(const shared_ptr<Variable> &VarUnit, AllocaInst *var);
     Value *ExpGen(const shared_ptr<BaseAST> &input);
     Value *GetArrayIndex(const shared_ptr<Variable> &VarUnit);
+    vector<Value*> GetGlobalArrayIndex(const shared_ptr<Variable> &VarUnit);
     bool FloatGen(Value *&L, Value *&R);
     void AssignGen(shared_ptr<Stmt> &StmtUnit);
     void IfGen(Function *F, shared_ptr<Stmt> &StmtUnit);

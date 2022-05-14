@@ -89,10 +89,23 @@ void gen::GlobalVarGen(shared_ptr<BaseAST> &Unit) {
     // TODO: add array
     shared_ptr<Variable> var(reinterpret_pointer_cast<Variable>(global->Var));
     if (GlobalValues.find(var->Var_name) == GlobalValues.end()) {
-        GlobalVariable *gVar = createGlob(GetType(global->Decl_type), var->Var_name);
-        if (global->Exp != nullptr)
-            gVar->setInitializer(dyn_cast<Constant>(ValueGen(global->Exp)));
-        GlobalValues.emplace(var->Var_name, gVar);
+        if (var->Length.empty()){
+            auto *gVar = new GlobalVariable(*GenModule, GetType(global->Decl_type), false, GlobalValue::ExternalLinkage,
+                                           ConstantInt::get(*GenContext, APInt(32, 0)), var->Var_name);
+            if (global->Exp != nullptr)
+                gVar->setInitializer(dyn_cast<Constant>(ValueGen(global->Exp)));
+            GlobalValues.emplace(var->Var_name, gVar);
+        }
+        else {
+            // create array
+            Value *arraySize = GetArraySize(var);
+            auto arrayType = ArrayType::get(GetType(global->Decl_type),
+                                            (dyn_cast<Constant>(arraySize)->getUniqueInteger().getSExtValue()));
+            auto *gVar = new GlobalVariable(*GenModule, arrayType, false, GlobalValue::ExternalLinkage,
+                                            ConstantArray::get(arrayType, ConstantInt::get(*GenContext, APInt(32, 0))), var->Var_name);
+            GlobalValues.emplace(var->Var_name, gVar);
+        }
+        NamedValues.insert(var->Var_name, nullptr, var->Length);
     }
     else cout << "error: redefinition of '"<< var->Var_name << "'" << endl;
 }
@@ -167,15 +180,20 @@ void gen::DeclGen(shared_ptr<BaseAST> &Block, vector<std::string> &removeList) {
     AllocaInst *Alloca;
     if (VarUnit->Length.empty()) Alloca = createBlockAlloca(*cur, VarUnit->Var_name, DeclUnit->Decl_type);
     else {
-        Value *arraySize = ValueGen(VarUnit->Length[0]);
-        for (int i = 1; i < VarUnit->Length.size(); ++i)
-            arraySize = GenBuilder->CreateMul(arraySize, ValueGen(VarUnit->Length[i]));
+        Value *arraySize = GetArraySize(VarUnit);
         Alloca = createBlockAlloca(*cur, VarUnit->Var_name, DeclUnit->Decl_type, arraySize);
     }
     if (InitVal != nullptr) GenBuilder->CreateStore(InitVal, Alloca);
     // add to symbol table
     NamedValues.insert(VarUnit->Var_name, Alloca, VarUnit->Length);
     removeList.push_back(VarUnit->Var_name);
+}
+
+Value *gen::GetArraySize(shared_ptr<Variable> &VarUnit) {
+    Value* arraySize = ValueGen(VarUnit->Length[0]);
+    for (int i = 1; i < VarUnit->Length.size(); ++i)
+        arraySize = GenBuilder->CreateMul(arraySize, ValueGen(VarUnit->Length[i]));
+    return arraySize;
 }
 
 // if StmtGen is changed, please change related code in WhileGen 
@@ -203,11 +221,31 @@ void gen::ScanfGen(shared_ptr<Stmt> &StmtUnit) {
             if (Param->AST_type == VARIABLE){
                 shared_ptr<Variable> VarUnit(reinterpret_pointer_cast<Variable>(Param));
                 AllocaInst *var = NamedValues.find(VarUnit->Var_name);
-                if (VarUnit->Length.empty())
-                    ArgValues.push_back(GenBuilder->CreateGEP(var->getAllocatedType(), var, ConstantInt::get(*GenContext, APInt(32, 0))));
+                if (var == nullptr){
+                    auto global = GlobalValues.find(VarUnit->Var_name);
+                    if (global == GlobalValues.end()) {
+                        cout << "error: undefined variable '" << VarUnit->Var_name << "'" << endl;
+                        exit(1);
+                    }
+                    auto global_var = global->second;
+                    if(global_var->getValueType()->isArrayTy()){
+                        auto args = GetGlobalArrayIndex(VarUnit);
+                        ArrayRef<Value*> argsRef(args);
+                        Value *ptr = GenBuilder->CreateInBoundsGEP(global_var->getValueType()->getScalarType(), global_var, argsRef);
+                        ArgValues.push_back(ptr);
+                    }
+                    else
+                        ArgValues.push_back(GenBuilder->CreateInBoundsGEP(global_var->getValueType(), global_var,
+                                                                  ConstantInt::get(*GenContext, APInt(32, 0))));
+                }
                 else {
-                    Value *index = GetArrayIndex(VarUnit);
-                    ArgValues.push_back(GenBuilder->CreateGEP(var->getAllocatedType(), var, index));
+                    if (VarUnit->Length.empty())
+                        ArgValues.push_back(GenBuilder->CreateInBoundsGEP(var->getAllocatedType(), var,
+                                                                ConstantInt::get(*GenContext, APInt(32, 0))));
+                    else {
+                        Value *index = GetArrayIndex(VarUnit);
+                        ArgValues.push_back(GenBuilder->CreateInBoundsGEP(var->getAllocatedType(), var, index));
+                    }
                 }
             }
         }
@@ -215,13 +253,21 @@ void gen::ScanfGen(shared_ptr<Stmt> &StmtUnit) {
     GenBuilder->CreateCall(CalleeF, ArgValues, "c_scanf");
 }
 
+vector<Value*> gen::GetGlobalArrayIndex(const shared_ptr<Variable> &VarUnit) {
+    Value *index = GetArrayIndex(VarUnit);
+    index = GenBuilder->CreateSExt(index, Type::getInt64Ty(*GenContext));
+    vector<Value*> args;
+    args.push_back(ConstantInt::get(*GenContext, APInt(64, 0)));
+    args.push_back(index);
+    return args;
+}
+
 Value *gen::GetArrayIndex(const shared_ptr<Variable> &VarUnit) {
     Value *index = ValueGen(VarUnit->Length[VarUnit->Length.size() - 1]);
     vector<shared_ptr<BaseAST>> arrayLength = NamedValues.array_dim(VarUnit->Var_name);
-    cout << "get array" << endl;
-    for(int i = 0; i < VarUnit->Length.size() - 1; ++i){
+    for (int i = 0; i < VarUnit->Length.size() - 1; ++i) {
         Value *arrayIndex = ValueGen(VarUnit->Length[i]);
-        for(int j = i+1; j < arrayLength.size(); ++j){
+        for (int j = i + 1; j < arrayLength.size(); ++j) {
             arrayIndex = GenBuilder->CreateMul(arrayIndex, ValueGen(arrayLength[j]));
         }
         index = GenBuilder->CreateAdd(index, arrayIndex);
@@ -233,7 +279,7 @@ void gen::PrintfGen(shared_ptr<Stmt> &StmtUnit) {
     Function *CalleeF = GenModule->getFunction("printf");
     vector<Value *> ArgValues;
     // replace \n with ascii 10
-    while(StmtUnit->IO.find("\\n") != string::npos) 
+    while(StmtUnit->IO.find("\\n") != string::npos)
         StmtUnit->IO.replace(StmtUnit->IO.find("\\n"), 2, string(1, toascii(10)));
     auto *FormatStrInst = GenBuilder->CreateGlobalStringPtr(StmtUnit->IO, "printf_format_str");
     ArgValues.push_back(FormatStrInst);
@@ -249,42 +295,55 @@ void gen::PrintfGen(shared_ptr<Stmt> &StmtUnit) {
     GenBuilder->CreateCall(CalleeF, ArgValues, "c_printf");
 }
 
-// void gen::StmtBr(Function *F, shared_ptr<BaseAST> &Block) {}
-
 void gen::AssignGen(shared_ptr<Stmt> &StmtUnit) {
     shared_ptr<Variable> VarUnit(reinterpret_pointer_cast<Variable>(StmtUnit->LVal));
     // check symbol table
     AllocaInst *var = NamedValues.find(VarUnit->Var_name);
-    if (var == nullptr) {
-        cout << "error: use of undeclared identifier '" << VarUnit->Var_name << "'" << endl;
-        exit(0);
-    }
     // type conversion
     Value *right = ValueGen(StmtUnit->RVal);
-    if (var->getAllocatedType() != right->getType()){
-        if (var->getAllocatedType()->isIntegerTy()) right = FloatToInt(right);
-        else if (var->getAllocatedType()->isFloatTy()) right = IntToFloat(right);
+    if (var == nullptr) {
+        auto global = GlobalValues.find(VarUnit->Var_name);
+        if (global == GlobalValues.end()) {
+            cout << "error: undefined variable '" << VarUnit->Var_name << "'" << endl;
+            exit(0);
+        }
+        if(GetFuncType(global->second) != GetFuncType(right)){
+            if (GetFuncType(global->second) == Int) right = FloatToInt(right);
+            else if (GetFuncType(global->second) == Float) right = IntToFloat(right);
+        }
+        if(global->second->getValueType()->isArrayTy()){
+            auto args = GetGlobalArrayIndex(VarUnit);
+            ArrayRef<Value*> argsRef(args);
+            GenBuilder->CreateStore(right, GenBuilder->CreateInBoundsGEP(global->second->getValueType()->getScalarType(), global->second, argsRef));
+        }
+        else GenBuilder->CreateStore(right, global->second);
     }
-    if (VarUnit->Length.empty()) GenBuilder->CreateStore(right, var);
     else {
-        // if is array
-        Value *location = GetLocation(VarUnit, var);
-        GenBuilder->CreateStore(right, location);
+        auto varType = var->getAllocatedType();
+        if (varType != right->getType()){
+            if (varType->isIntegerTy()) right = FloatToInt(right);
+            else if (varType->isFloatTy()) right = IntToFloat(right);
+        }
+        if (VarUnit->Length.empty()) GenBuilder->CreateStore(right, var);
+        else {
+            // if is array
+            Value *location = GetLocation(VarUnit, var);
+            GenBuilder->CreateStore(right, location);
+        }
     }
 }
 
 Value *gen::GetLocation(const shared_ptr<Variable> &VarUnit, AllocaInst *var) {
-    cout <<"GetLocation" << endl;
     Value *location;
     Value *index = GetArrayIndex(VarUnit);
     if (var->getAllocatedType()->isPointerTy()){
         Value *st = GenBuilder->CreateLoad(var->getAllocatedType(), var, var->getName().data());
         if (var->getAllocatedType() == GetPtrType(Int))
-            location = GenBuilder->CreateGEP(GetType(Int), st, index);
+            location = GenBuilder->CreateInBoundsGEP(GetType(Int), st, index);
         else
-            location = GenBuilder->CreateGEP(GetType(Float), st, index);
+            location = GenBuilder->CreateInBoundsGEP(GetType(Float), st, index);
     }
-    else location = GenBuilder->CreateGEP(var->getAllocatedType(), var, index);
+    else location = GenBuilder->CreateInBoundsGEP(var->getAllocatedType(), var, index);
     return location;
 }
 
@@ -361,10 +420,10 @@ void gen::IfGen(Function *F, shared_ptr<Stmt> &StmtUnit, BasicBlock *loopBB, Bas
         }
     }
     NamedValues.remove(removeList);
-    
+
     if(!is_break_if)
         GenBuilder->CreateBr(mergeBB);
-    else 
+    else
         GenBuilder->CreateBr(endLoopBB);
 
     // condition = false
@@ -396,7 +455,7 @@ void gen::IfGen(Function *F, shared_ptr<Stmt> &StmtUnit, BasicBlock *loopBB, Bas
     }
     if(!is_break_else)
         GenBuilder->CreateBr(mergeBB);
-    else 
+    else
         GenBuilder->CreateBr(endLoopBB);
     // merge
     GenBuilder->SetInsertPoint(mergeBB);
@@ -404,7 +463,7 @@ void gen::IfGen(Function *F, shared_ptr<Stmt> &StmtUnit, BasicBlock *loopBB, Bas
 
 // CodeGen of "while" -> 在while中的if中实现continue和break
 void gen::WhileGen(Function *F, shared_ptr<Stmt> &StmtUnit) {
-    
+
     // BasicBlock *entryBB = createBB(F, "entry");
     BasicBlock *loopBB = createBB(F, "loop");
     BasicBlock *endLoopBB = createBB(F, "endLoop");
@@ -439,7 +498,7 @@ void gen::WhileGen(Function *F, shared_ptr<Stmt> &StmtUnit) {
     // endLoop or not
     EndCond = ValueGen(StmtUnit->Condition);
     GenBuilder->CreateCondBr(EndCond, loopBB, endLoopBB);
-    
+
     GenBuilder->SetInsertPoint(endLoopBB);
     // endWhile:
     // GenBuilder->SetInsertPoint(endWhileBB);
@@ -502,15 +561,29 @@ Value *gen::ValueGen(shared_ptr<BaseAST> &input) {
         shared_ptr<Variable> variable(reinterpret_pointer_cast<Variable>(input));
         AllocaInst *var = NamedValues.find(variable->Var_name);
         if (var == nullptr) {
-            cout << "error: use of undeclared identifier '" << variable->Var_name << "'" << endl;
-            exit(0);
+            auto global = GlobalValues.find(variable->Var_name);
+            if (global == GlobalValues.end()) {
+                cout << "Error: Undefined variable " << variable->Var_name << endl;
+                exit(1);
+            }
+            if (global->second->getValueType()->isArrayTy()){
+                auto args = GetGlobalArrayIndex(variable);
+                ArrayRef<Value*> argsRef(args);
+                type re = GetFuncType(global->second);
+                Value *location = GenBuilder->CreateInBoundsGEP(global->second->getValueType()->getScalarType(), global->second, argsRef);
+                return GenBuilder->CreateLoad(GetType(re), location);
+            }
+            else
+                return GenBuilder->CreateLoad(global->second->getValueType(), global->second);
         }
-        if (variable->Length.empty())
-            return GenBuilder->CreateLoad(var->getAllocatedType(), var, var->getName().data());
         else {
-            Value *location = GetLocation(variable, var);
-            type re = GetFuncType(var);
-            return GenBuilder->CreateLoad(GetType(re), location, var->getName().data());
+            if (variable->Length.empty())
+                return GenBuilder->CreateLoad(var->getAllocatedType(), var, var->getName().data());
+            else {
+                Value *location = GetLocation(variable, var);
+                type re = GetFuncType(var);
+                return GenBuilder->CreateLoad(GetType(re), location, var->getName().data());
+            }
         }
     }
     else if (input->AST_type == FUNCPROTO) return FuncCallGen(input);
@@ -583,6 +656,34 @@ type gen::GetFuncType(const AllocaInst *var) {
     return re;
 }
 
+type gen::GetFuncType(const GlobalVariable *var) {
+    type re;
+    auto tmp = var->getValueType();
+    if(tmp->isArrayTy()){
+        if(tmp->getArrayElementType()->isIntegerTy()) re = Int;
+        else re = Float;
+    }
+    else{
+        if(tmp->isIntegerTy()) re = Int;
+        else re = Float;
+    }
+    return re;
+}
+
+type gen::GetFuncType(const Value *var) {
+    type re;
+    if (var->getType()->isPointerTy()){
+        if (var->getType() == GetPtrType(Int))
+            re = Int;
+        else re = Float;
+    }else {
+        if (var->getType() == GetType(Int))
+            re = Int;
+        else re = Float;
+    }
+    return re;
+}
+
 Value *gen::FuncCallGen(shared_ptr<BaseAST> &input) {
     shared_ptr<FuncPrototype> prototype(reinterpret_pointer_cast<FuncPrototype>(input));
     Function *CalleeF = GenModule->getFunction(prototype->Func_name);
@@ -596,11 +697,15 @@ Value *gen::FuncCallGen(shared_ptr<BaseAST> &input) {
             if (Param->AST_type == VARIABLE){
                 shared_ptr<Variable> VarUnit(reinterpret_pointer_cast<Variable>(Param));
                 AllocaInst *var = NamedValues.find(VarUnit->Var_name);
+                if (var == nullptr){
+                    cout << "Error: Undefined variable " << VarUnit->Var_name << endl;
+                    exit(1);
+                }
                 vector<shared_ptr<BaseAST>> dim = NamedValues.array_dim(VarUnit->Var_name);
                 if (var->getAllocatedType()->isPointerTy())
                     ArgsV.push_back(GenBuilder->CreateLoad(var->getAllocatedType(), var, var->getName().data()));
                 else if (!dim.empty() && VarUnit->Length.empty())
-                    ArgsV.push_back(GenBuilder->CreateGEP(var->getAllocatedType(), var, ConstantInt::get(*GenContext, APInt(32, 0))));
+                    ArgsV.push_back(GenBuilder->CreateInBoundsGEP(var->getAllocatedType(), var, ConstantInt::get(*GenContext, APInt(32, 0))));
                 else{
                     shared_ptr<BaseAST> te(reinterpret_pointer_cast<BaseAST>(VarUnit));
                     ArgsV.push_back(ValueGen(te));
@@ -619,12 +724,6 @@ bool gen::FloatGen(Value *&L, Value *&R) {
         if(R->getType()->isIntegerTy()) R = IntToFloat(R);
     }
     return is_float;
-}
-
-GlobalVariable *gen::createGlob(Type *type, const std::string& name) {
-    GenModule->getOrInsertGlobal(name, type);
-    GlobalVariable *gVar = GenModule->getNamedGlobal(name);
-    return gVar;
 }
 
 AllocaInst *gen::createBlockAlloca(BasicBlock &block, const string &VarName, type VarType) {

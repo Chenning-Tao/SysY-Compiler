@@ -1,10 +1,13 @@
+int A[30][30];
+int B[30][30];
+int C[30][30];
 int main() {
     int n1;
     int m1;
     int n2;
     int m2;
     scanf("%d%d", n1, m1);
-    int A[30][30];
+    
     int i = 0;
     int j;
     while(i < n1) {
@@ -17,7 +20,7 @@ int main() {
     }
 
     scanf("%d%d", n2, m2);
-    int B[30][30];
+    
     i = 0;
     while(i < n2) {
         j = 0;
@@ -34,7 +37,7 @@ int main() {
     }
 
     i = 0;
-    int C[30][30];
+    
     while (i < n1) {
         j = 0;
         while (j < m2) {
