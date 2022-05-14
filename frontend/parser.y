@@ -36,6 +36,7 @@ extern int yylineno;
 
 %token <str_val> IDENT STRING
 %token INT FLOAT VOID RETURN CONST IF ELSE WHILE BREAK CONTINUE PRINTF SCANF
+%token NE EQ LT GT LE GE
 %token <int_val> INT_CONST
 %token <float_val> FLOAT_CONST
 
@@ -453,7 +454,8 @@ Stmt
 	}
 	;
 
-Exp : AddExp { $$ = $1; };
+Exp : AddExp { $$ = $1; }
+	| LOrExp { $$ = $1; };
 
 Cond : LOrExp { $$ = $1; } ;
 
@@ -616,7 +618,7 @@ AddExp
 
 RelExp
 	: AddExp { $$ = $1; }
-	| RelExp '<' AddExp {
+	| RelExp LT AddExp {
 		auto ast = new Exp();
 		ast->AST_type = EXP;
 		ast->Name = "RelExp";
@@ -625,7 +627,7 @@ RelExp
 		ast->Right_exp = shared_ptr<BaseAST>($3);
 		$$ = ast;
 	}
-	| RelExp '>' AddExp { 
+	| RelExp GT AddExp { 
 		auto ast = new Exp();
 		ast->AST_type = EXP;
 		ast->Name = "RelExp";
@@ -634,44 +636,44 @@ RelExp
 		ast->Right_exp = shared_ptr<BaseAST>($3);
 		$$ = ast;
 	}
-	| RelExp '<' '=' AddExp { 
+	| RelExp LE AddExp { 
 		auto ast = new Exp();
 		ast->AST_type = EXP;
 		ast->Name = "RelExp";
 		ast->Left_exp = shared_ptr<BaseAST>($1);
 		ast->Operator = "<=";
-		ast->Right_exp = shared_ptr<BaseAST>($4);
+		ast->Right_exp = shared_ptr<BaseAST>($3);
 		$$ = ast;
 	}
-	| RelExp '>' '=' AddExp { 
+	| RelExp GE AddExp { 
 		auto ast = new Exp();
 		ast->AST_type = EXP;
 		ast->Name = "RelExp";
 		ast->Left_exp = shared_ptr<BaseAST>($1);
 		ast->Operator = ">=";
-		ast->Right_exp = shared_ptr<BaseAST>($4);
+		ast->Right_exp = shared_ptr<BaseAST>($3);
 		$$ = ast;
 	}
 	;
 
 EqExp
 	: RelExp { $$ = $1; }
-	| EqExp '=' '=' RelExp { 
+	| EqExp EQ RelExp { 
 		auto ast = new Exp();
 		ast->AST_type = EXP;
 		ast->Name = "EqExp";
 		ast->Left_exp = shared_ptr<BaseAST>($1);
 		ast->Operator = "==";
-		ast->Right_exp = shared_ptr<BaseAST>($4);
+		ast->Right_exp = shared_ptr<BaseAST>($3);
 		$$ = ast;
 	}
-	| EqExp '!' '=' RelExp { 
+	| EqExp NE RelExp { 
 		auto ast = new Exp();
 		ast->AST_type = EXP;
 		ast->Name = "EqExp";
 		ast->Left_exp = shared_ptr<BaseAST>($1);
 		ast->Operator = "!=";
-		ast->Right_exp = shared_ptr<BaseAST>($4);
+		ast->Right_exp = shared_ptr<BaseAST>($3);
 		$$ = ast;
 	}
 	;

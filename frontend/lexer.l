@@ -42,6 +42,12 @@ Float         [0-9]+\.[0-9]*
 "continue"      { return CONTINUE; }
 "printf"        { return PRINTF; }
 "scanf"         { return SCANF; }
+"!="            { return NE; }
+"=="            { return EQ; }
+"<"             { return LT; }
+">"             { return GT; }
+"<="            { return LE; }
+">="            { return GE; }
 
 {Identifier}    { yylval.str_val = new string(yytext); return IDENT; }
 {String}        { char* tmp = new char[yyleng - 1]; strcpy(tmp, yytext + 1); tmp[yyleng-2] = '\0'; yylval.str_val = new string(tmp); return STRING; }
