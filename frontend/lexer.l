@@ -3,11 +3,27 @@
 %option noinput
 %option yylineno
 
+
 %{
 
 #include <cstdlib>
 #include <cstring>
 #include "parser.tab.hpp"
+#include <cstring>
+
+// %option c++
+// extern int yyinput();
+// extern void yyunput (int c, char * yy_bp );
+// "/*" {
+//         int c;
+//         while((c = yyinput()) != 0){
+//             if(c == '\n') ++yylineno;
+//             else if(c == '*'){
+//                 if((c = yyinput()) == '/') break;
+//                 else unput(c);
+//             }
+//         }
+//      }
 
 using namespace std;
 
