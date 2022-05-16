@@ -255,9 +255,9 @@ void gen::ScanfGen(shared_ptr<Stmt> &StmtUnit) {
 
 vector<Value*> gen::GetGlobalArrayIndex(const shared_ptr<Variable> &VarUnit) {
     Value *index = GetArrayIndex(VarUnit);
-    index = GenBuilder->CreateSExt(index, Type::getInt64Ty(*GenContext));
+//    index = GenBuilder->CreateSExt(index, Type::getInt64Ty(*GenContext));
     vector<Value*> args;
-    args.push_back(ConstantInt::get(*GenContext, APInt(64, 0)));
+    args.push_back(ConstantInt::get(*GenContext, APInt(32, 0)));
     args.push_back(index);
     return args;
 }
@@ -612,8 +612,8 @@ Value *gen::ExpGen(const shared_ptr<BaseAST> &input) {
         else return GenBuilder->CreateMul(L, R);
     }
     else if(expression->Operator == "/"){
-        if(L->getType()->isFloatTy()) L = GenBuilder->CreateSIToFP(L, Type::getFloatTy(*GenContext));
-        if(R->getType()->isFloatTy()) R = GenBuilder->CreateSIToFP(R, Type::getFloatTy(*GenContext));
+        if(L->getType()->isIntegerTy()) L = GenBuilder->CreateSIToFP(L, Type::getFloatTy(*GenContext));
+        if(R->getType()->isIntegerTy()) R = GenBuilder->CreateSIToFP(R, Type::getFloatTy(*GenContext));
         return GenBuilder->CreateFDiv(L, R);
     }
     else if(expression->Operator == "==") {
@@ -639,6 +639,17 @@ Value *gen::ExpGen(const shared_ptr<BaseAST> &input) {
     else if (expression->Operator == ">=") {
         if (is_float) return GenBuilder->CreateFCmpOGE(L, R);
         else return GenBuilder->CreateICmpSGE(L, R);
+    }
+    else if (expression->Operator == "&&") {
+        return GenBuilder->CreateAnd(L, R);
+    }
+    else if (expression->Operator == "||") {
+        return GenBuilder->CreateOr(L, R);
+    }
+    else if (expression->Operator == "%") {
+        if (L->getType()->isFloatTy()) L = FloatToInt(L);
+        if (R->getType()->isFloatTy()) R = FloatToInt(R);
+        return GenBuilder->CreateSRem(L, R);
     }
 }
 
