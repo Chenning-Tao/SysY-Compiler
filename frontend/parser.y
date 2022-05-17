@@ -2,29 +2,38 @@
 	#include <memory>
 	#include <string>
 	#include "ast.hpp"
+	#include "myScanner.hpp"
 	using namespace std;
 }
 
-%{
-
-#define YYDEBUG 1
-#include <iostream>
-#include <memory>
-#include <string>
-#include <vector>
-#include "ast.hpp"
-
-
-using namespace std;
-// declear lex function and error process function
-int yylex();
-void yyerror(shared_ptr<BaseAST> &ast, const char *s);
-extern int yylineno;
-
-%}
-
 // return value
 %parse-param { shared_ptr<BaseAST> &ast }
+%parse-param { myScanner &scanner }
+
+%code {
+
+	#define YYDEBUG 1
+	#include <iostream>
+	#include <memory>
+	#include <string>
+	#include <vector>
+	#include "myScanner.hpp"
+	#include "ast.hpp"
+	#define parser_class_name {myScanner}
+
+
+	using namespace std;
+	// declear lex function and error process function
+	void yyerror(shared_ptr<BaseAST> &ast, myScanner &scanner, const char *s);
+	extern int yylineno;
+
+	#undef yylex
+	#define yylex scanner.yylex
+
+	#undef yylineno
+	#define yylineno scanner.lineno()
+
+}
 
 // defination of yylval
 %union {
@@ -707,6 +716,6 @@ LOrExp
 %%
 
 // error process function, second parameter is error message
-void yyerror(shared_ptr<BaseAST> &ast, const char *s) {
+void yyerror(shared_ptr<BaseAST> &ast, myScanner &scanner, const char *s) {
 	cerr << "error: " << s << " at line " << yylineno << endl;
 }

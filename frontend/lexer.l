@@ -2,28 +2,22 @@
 %option nounput
 %option noinput
 %option yylineno
-
+%option c++
+%option yyclass="myScanner"
 
 %{
 
 #include <cstdlib>
 #include <cstring>
 #include "parser.tab.hpp"
+#include "myScanner.hpp"
 #include <cstring>
 
-// %option c++
+#undef YY_DECL
+#define YY_DECL int myScanner::yylex()
+
 // extern int yyinput();
 // extern void yyunput (int c, char * yy_bp );
-// "/*" {
-//         int c;
-//         while((c = yyinput()) != 0){
-//             if(c == '\n') ++yylineno;
-//             else if(c == '*'){
-//                 if((c = yyinput()) == '/') break;
-//                 else unput(c);
-//             }
-//         }
-//      }
 
 using namespace std;
 
@@ -64,6 +58,16 @@ Float         [0-9]+\.[0-9]*
 ">"             { return GT; }
 "<="            { return LE; }
 ">="            { return GE; }
+
+"/*" {
+        int c;
+        while((c = yyinput()) != 0){
+            if(c == '*'){
+                if((c = yyinput()) == '/') break;
+                else unput(c);
+            }
+        }
+     }
 
 {Identifier}    { yylval.str_val = new string(yytext); return IDENT; }
 {String}        { char* tmp = new char[yyleng - 1]; strcpy(tmp, yytext + 1); tmp[yyleng-2] = '\0'; yylval.str_val = new string(tmp); return STRING; }

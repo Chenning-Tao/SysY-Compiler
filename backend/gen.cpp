@@ -86,7 +86,6 @@ void gen::OutputGen() {
 void gen::GlobalVarGen(shared_ptr<BaseAST> &Unit) {
     shared_ptr<Decl> global(reinterpret_pointer_cast<Decl>(Unit));
     // determine whether it has been declared
-    // TODO: add array
     shared_ptr<Variable> var(reinterpret_pointer_cast<Variable>(global->Var));
     if (GlobalValues.find(var->Var_name) == GlobalValues.end()) {
         if (var->Length.empty()){
