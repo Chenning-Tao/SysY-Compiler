@@ -36,7 +36,7 @@ add_definitions(${LLVM_DEFINITIONS_LIST})
 include_directories(${LLVM_INCLUDE_DIRS})
 
 
-add_executable(compiler ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS} main.cpp frontend/ast.cpp backend/gen.cpp backend/gen.hpp backend/symbolTable.cpp backend/symbolTable.hpp)
+add_executable(compiler ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS} main.cpp frontend/ast.cpp backend/gen.cpp backend/gen.hpp backend/symbolTable.cpp backend/symbolTable.hpp frontend/macro.cpp frontend/macro.hpp)
 
 llvm_map_components_to_libnames(llvm_libs ${LLVM_TARGETS_TO_BUILD} support core irreader codegen mc mcparser option)
 
