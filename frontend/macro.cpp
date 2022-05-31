@@ -29,7 +29,9 @@ int macro::function(const string& a) {
 }
 
 string macro::get_macro(const string& a) {
-    return macro_map[a];
+    string re = macro_map[a];
+    while(macro_map.find(re) != macro_map.end()) re = macro_map[re];
+    return re;
 }
 
 string macro::get_macro(const string& a, string var_list) {

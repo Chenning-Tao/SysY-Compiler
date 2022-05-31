@@ -73,7 +73,12 @@ Float         [0-9]+\.[0-9]*
     string var_list;
     bool flag = false;
     while((c = yyinput()) != '\n' && c != EOF) {
-        if(c == ' ') flag = true;
+        if(c == 92) {
+            c = yyinput();
+            continue;
+        }
+        else if(flag == true) b += c;
+        else if(c == ' ') flag = true;
         else if(flag == false) {
             if (c == '('){
                 while((c = yyinput()) != ')') {
@@ -82,7 +87,6 @@ Float         [0-9]+\.[0-9]*
             }
             else a += c;
         }
-        else b += c;
     }
     bool success = true;
     if(var_list.empty()) success = macro_list.add_macro(a, b);

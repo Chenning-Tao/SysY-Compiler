@@ -6,6 +6,7 @@
 	using namespace std;
 }
 
+%locations
 // return value
 %parse-param { shared_ptr<BaseAST> &ast }
 %parse-param { myScanner &scanner }
@@ -21,11 +22,11 @@
 	#include "ast.hpp"
 	#define parser_class_name {myScanner}
 
-
 	using namespace std;
 	// declear lex function and error process function
 	void yyerror(shared_ptr<BaseAST> &ast, myScanner &scanner, const char *s);
 	extern int yylineno;
+	extern int yycolumn;
 
 	#undef yylex
 	#define yylex scanner.yylex
@@ -717,5 +718,5 @@ LOrExp
 
 // error process function, second parameter is error message
 void yyerror(shared_ptr<BaseAST> &ast, myScanner &scanner, const char *s) {
-	cerr << "error: " << s << " at line " << yylineno << endl;
+	cerr << "error: " << s << " at line " << yylineno << ":" << yycolumn << endl;
 }
