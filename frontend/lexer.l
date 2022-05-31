@@ -17,8 +17,12 @@
 #undef YY_DECL
 #define YY_DECL int myScanner::yylex()
 
-// extern int yyinput();
-// extern void yyunput (int c, char * yy_bp );
+int yycolumn = 1;
+#define YY_USER_ACTION \
+    yylloc.first_line = yylloc.last_line = yylineno; \
+    yylloc.first_column = yycolumn; \
+    yylloc.last_column = yycolumn + yyleng - 1; \
+    yycolumn += yyleng;
 
 using namespace std;
 
@@ -27,7 +31,7 @@ macro macro_list;
 %}
 
 /* TODO: add negative number */
-WhiteSpace    [ \t\n\r]*
+WhiteSpace    [ \t\r]*
 LineComment   "//".*$
 
 Identifier    [a-zA-Z_][a-zA-Z0-9_]*
@@ -61,6 +65,7 @@ Float         [0-9]+\.[0-9]*
 ">"             { return GT; }
 "<="            { return LE; }
 ">="            { return GE; }
+\n              { yycolumn=1; }
 
 "#define" {
     int c = yyinput();
@@ -82,6 +87,7 @@ Float         [0-9]+\.[0-9]*
     bool success = true;
     if(var_list.empty()) success = macro_list.add_macro(a, b);
     else success = macro_list.add_macro(a, b, var_list);
+    yycolumn=1;
     if(!success) {
         cerr << "macro " << a << " has been defined" << endl;
         exit(1);
@@ -100,7 +106,6 @@ Float         [0-9]+\.[0-9]*
 
 {Identifier}    {
     int type = macro_list.function(yytext);
-    cout << type;
     string s;
     if(type == 1) s = macro_list.get_macro(yytext);
     else if(type == 2) {
