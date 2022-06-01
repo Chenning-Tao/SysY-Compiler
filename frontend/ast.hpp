@@ -10,9 +10,9 @@
 #include <vector>
 using namespace std;
 
-enum type {Int, Float, Void};
+enum type {Int, Float, Void, Struct};
 enum stmt {If, While, Break, Continue, Return, Assign, Printf, Scanf, Expression};
-enum ast {FUNC, FUNCPROTO, DECL, EXP, FINALEXP, STMT, COMPUNIT, VARIABLE};
+enum ast {FUNC, FUNCPROTO, DECL, EXP, FINALEXP, STMT, COMPUNIT, VARIABLE, EXPLIST};
 
 static void print_indent(int indent) {
     for(int i = 0; i < indent; ++i) cout << "\t";
@@ -66,8 +66,10 @@ class Decl : public BaseAST {
 public:
     bool Const;
     type Decl_type;
+    string Struct_name;
     shared_ptr<BaseAST> Var;
     shared_ptr<BaseAST> Exp;
+    vector<shared_ptr<BaseAST>> Member;
 
     void print(int indent) const override;
 };
@@ -83,6 +85,14 @@ public:
     vector<shared_ptr<BaseAST>> First_block;
     vector<shared_ptr<BaseAST>> Second_block;
     shared_ptr<BaseAST> Condition;
+
+    void print(int indent) const override;
+};
+
+// class for expression list
+class ExpList : public BaseAST {
+public:
+    vector<shared_ptr<BaseAST>> Exps;
 
     void print(int indent) const override;
 };

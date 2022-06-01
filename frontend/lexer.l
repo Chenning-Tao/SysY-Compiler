@@ -49,6 +49,7 @@ Float         [0-9]+\.[0-9]*
 
 "int"           { return INT; }
 "float"         { return FLOAT; }
+"struct"        { return STRUCT; }
 "return"        { return RETURN; }
 "const"         { return CONST; }
 "void"          { return VOID; }

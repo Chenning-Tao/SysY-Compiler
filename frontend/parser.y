@@ -45,13 +45,13 @@
 }
 
 %token <str_val> IDENT STRING
-%token INT FLOAT VOID RETURN CONST IF ELSE WHILE BREAK CONTINUE PRINTF SCANF
+%token INT FLOAT STRUCT VOID RETURN CONST IF ELSE WHILE BREAK CONTINUE PRINTF SCANF
 %token NE EQ LT GT LE GE
 %token <int_val> INT_CONST
 %token <float_val> FLOAT_CONST
 
 // none terminal type
-%type <ast_val> FuncFParams_Wrap FuncRParams_Wrap FuncFParams FuncFParam Exp_Wrap FuncRParams LVal LOrExp LAndExp EqExp RelExp Cond AddExp MulExp PrimaryExp UnaryExp Exp FuncDef FuncType Block Stmt Decl CompUnit ConstDecl VarDecl BType ConstDef BlockItem_Wrap BlockItem VarDef Number InitVal
+%type <ast_val> InitVal_Wrap VarDecl_Wrap StructDecl FuncFParams_Wrap FuncRParams_Wrap FuncFParams FuncFParam Exp_Wrap FuncRParams LVal LOrExp LAndExp EqExp RelExp Cond AddExp MulExp PrimaryExp UnaryExp Exp FuncDef FuncType Block Stmt Decl CompUnit ConstDecl VarDecl BType ConstDef BlockItem_Wrap BlockItem VarDef Number InitVal
 
 %%
 
@@ -103,11 +103,50 @@ Decl
 		$1->AST_type = DECL;
 		$$ = $1; 
 	}
+	| StructDecl {
+		$1->Name = "StructDecl";
+		$1->AST_type = DECL;
+		$$ = $1;
+	}
 	; 
 
 // TODO: add rule for const value
 ConstDecl
 	: CONST BType ConstDef ';' { }
+	;
+
+StructDecl
+	: STRUCT IDENT '{' VarDecl_Wrap '}' ';' { 
+		auto ast = new Decl();
+		ast->Decl_type = Struct;
+		ast->Struct_name = *shared_ptr<string>($2);
+		ast->Member = move(reinterpret_cast<Decl*>$4->Member);
+		$$ = ast;
+	}
+	| STRUCT IDENT IDENT '=' InitVal ';' {
+		auto ast = new Decl();
+		ast->Decl_type = Struct;
+		ast->Struct_name = *shared_ptr<string>($2);
+		auto var_ast = new Variable();
+		var_ast->Var_name = *shared_ptr<string>($3);
+		var_ast->Length = vector<shared_ptr<BaseAST>>();
+		ast->Var = shared_ptr<BaseAST>(var_ast);
+		ast->Exp = shared_ptr<BaseAST>($5);
+		$$ = ast;
+	}
+	;
+
+VarDecl_Wrap
+	: VarDecl { 
+		auto ast = new Decl();
+		ast->Member.push_back(shared_ptr<BaseAST>($1));
+		$$ = ast;
+	}
+	| VarDecl_Wrap VarDecl { 
+		auto ast = reinterpret_cast<Decl*>$1;
+		ast->Member.push_back(shared_ptr<BaseAST>($2));
+		$$ = ast;
+	}
 	;
 
 BType
@@ -212,13 +251,26 @@ VarDef
 InitVal
 	: Exp { $$ = $1; }
 	| '{''}' { }
-	| '{' InitVal '}' { }
-	| '{' InitVal InitVal_Wrap '}' { }
+	| '{' InitVal '}' { $$ = $2; }
+	| '{' InitVal InitVal_Wrap '}' { 
+		auto ast = reinterpret_cast<ExpList*>$3;
+		ast->AST_type = EXPLIST;
+		ast->Exps.insert(ast->Exps.begin(), shared_ptr<BaseAST>($2));
+		$$ = ast;
+	}
 	;
 
 InitVal_Wrap
-	: ',' InitVal { }
-	| ',' InitVal InitVal_Wrap { }
+	: ',' InitVal { 
+		auto ast = new ExpList();
+		ast->Exps.push_back(shared_ptr<BaseAST>($2));
+		$$ = ast;
+	}
+	| ',' InitVal InitVal_Wrap { 
+		auto ast = reinterpret_cast<ExpList*>$3;
+		ast->Exps.insert(ast->Exps.begin(), shared_ptr<BaseAST>($2));
+		$$ = ast;
+	}
 	;
 
 FuncDef

@@ -156,36 +156,75 @@ void gen::FuncGen(shared_ptr<BaseAST> &Unit) {
     NamedValues.remove(removeList);
     if (Proto->Func_type == Void) GenBuilder->CreateRetVoid();
 
-    TheFPM->run(*F);
+//    TheFPM->run(*F);
 }
 
 void gen::DeclGen(shared_ptr<BaseAST> &Block, vector<std::string> &removeList) {
     shared_ptr<Decl> DeclUnit(reinterpret_pointer_cast<Decl>(Block));
-    shared_ptr<Variable> VarUnit(reinterpret_pointer_cast<Variable>(DeclUnit->Var));
     auto *cur = GenBuilder->GetInsertBlock();
-    // check redefinition
-    auto check_sym = find(removeList.begin(), removeList.end(), VarUnit->Var_name);
-    if (check_sym != removeList.end()) {
-        cout << "error: redefinition of '"<< VarUnit->Var_name << "'" << endl;
-        exit(0);
+    if (DeclUnit->Decl_type == Struct){
+        // create struct type
+        if (DeclUnit->Exp == nullptr) {
+            StructType *Str = StructType::create(*GenContext, DeclUnit->Struct_name);
+            vector<Type*> Para{};
+            vector<string> ParaNames{};
+            for(auto & i : DeclUnit->Member){
+                shared_ptr<Decl> Unit(reinterpret_pointer_cast<Decl>(i));
+                shared_ptr<Variable> UnitVar(reinterpret_pointer_cast<Variable>(Unit->Var));
+                Para.push_back(GetType(Unit->Decl_type));
+                ParaNames.push_back(UnitVar->Var_name);
+            }
+            Str->setBody(Para);
+            structInfo info;
+            info.type = Str;
+            info.field = ParaNames;
+            NamedValues.insertStruct(DeclUnit->Struct_name, info);
+        }
+        // create struct with init value
+        else {
+            shared_ptr<Variable> VarUnit(reinterpret_pointer_cast<Variable>(DeclUnit->Var));
+            structInfo info = NamedValues.findStruct(DeclUnit->Struct_name);
+            if (info.type == nullptr) {
+                cerr << "error: undefined struct '" << DeclUnit->Struct_name << "'" << endl;
+                exit(0);
+            }
+            AllocaInst *Alloca;
+            Alloca = GenBuilder->CreateAlloca(info.type, nullptr, VarUnit->Var_name);
+            NamedValues.insert(VarUnit->Var_name, Alloca, VarUnit->Length);
+            shared_ptr<ExpList> ExpListUnit(reinterpret_pointer_cast<ExpList>(DeclUnit->Exp));
+            for (int i = 0; i < ExpListUnit->Exps.size(); ++i){
+                Value* V = ValueGen(ExpListUnit->Exps[i]);
+                Value* loc = GenBuilder->CreateInBoundsGEP(info.type, Alloca, {GenBuilder->getInt32(0), GenBuilder->getInt32(i)});
+                GenBuilder->CreateStore(V, loc);
+            }
+        }
     }
-    Value *InitVal = nullptr;
-    if (DeclUnit->Exp != nullptr) {
-        InitVal = ValueGen(DeclUnit->Exp);
-        if (DeclUnit->Decl_type == Float && InitVal->getType()->isIntegerTy())
-            InitVal = IntToFloat(InitVal);
-    }
-    // create IR
-    AllocaInst *Alloca;
-    if (VarUnit->Length.empty()) Alloca = createBlockAlloca(*cur, VarUnit->Var_name, DeclUnit->Decl_type);
     else {
-        Value *arraySize = GetArraySize(VarUnit);
-        Alloca = createBlockAlloca(*cur, VarUnit->Var_name, DeclUnit->Decl_type, arraySize);
+        shared_ptr<Variable> VarUnit(reinterpret_pointer_cast<Variable>(DeclUnit->Var));
+        // check redefinition
+        auto check_sym = find(removeList.begin(), removeList.end(), VarUnit->Var_name);
+        if (check_sym != removeList.end()) {
+            cout << "error: redefinition of '" << VarUnit->Var_name << "'" << endl;
+            exit(0);
+        }
+        Value *InitVal = nullptr;
+        if (DeclUnit->Exp != nullptr) {
+            InitVal = ValueGen(DeclUnit->Exp);
+            if (DeclUnit->Decl_type == Float && InitVal->getType()->isIntegerTy())
+                InitVal = IntToFloat(InitVal);
+        }
+        // create IR
+        AllocaInst *Alloca;
+        if (VarUnit->Length.empty()) Alloca = createBlockAlloca(*cur, VarUnit->Var_name, DeclUnit->Decl_type);
+        else {
+            Value *arraySize = GetArraySize(VarUnit);
+            Alloca = createBlockAlloca(*cur, VarUnit->Var_name, DeclUnit->Decl_type, arraySize);
+        }
+        if (InitVal != nullptr) GenBuilder->CreateStore(InitVal, Alloca);
+        // add to symbol table
+        NamedValues.insert(VarUnit->Var_name, Alloca, VarUnit->Length);
+        removeList.push_back(VarUnit->Var_name);
     }
-    if (InitVal != nullptr) GenBuilder->CreateStore(InitVal, Alloca);
-    // add to symbol table
-    NamedValues.insert(VarUnit->Var_name, Alloca, VarUnit->Length);
-    removeList.push_back(VarUnit->Var_name);
 }
 
 Value *gen::GetArraySize(shared_ptr<Variable> &VarUnit) {

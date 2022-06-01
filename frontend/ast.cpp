@@ -8,11 +8,13 @@ void Decl::print(int indent) const {
     cout << Name << "\t";
     print_type(Decl_type);
     cout << "\t";
-    Var->print(indent);
-    if (this->Exp != nullptr) {
-        cout << endl;
-        print_indent(++indent);
-        Exp->print(indent);
+    if (Decl_type != Struct) {
+        Var->print(indent);
+        if (this->Exp != nullptr) {
+            cout << endl;
+            print_indent(++indent);
+            Exp->print(indent);
+        }
     }
 }
 
@@ -120,4 +122,8 @@ void FuncPrototype::print(int indent) const {
         Param->print(indent);
         --indent;
     }
+}
+
+void ExpList::print(int indent) const {
+
 }

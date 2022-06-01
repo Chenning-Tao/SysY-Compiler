@@ -13,16 +13,23 @@
 #include "llvm/IR/Instructions.h"
 
 using namespace llvm;
+typedef struct _structInfo {
+    StructType* type;
+    vector<string> field;
+}structInfo;
 
 class symbolTable {
 private:
-    std::unordered_map<std::string, std::stack<AllocaInst *>> table;
+    unordered_map<string, structInfo> structTable;
+    unordered_map<string, stack<AllocaInst *>> table;
     // value indicate array dim, 0 indicate it's not an array
-    std::unordered_map<std::string, std::stack<std::vector<std::shared_ptr<BaseAST>>>> array;
+    unordered_map<string, stack<vector<shared_ptr<BaseAST>>>> array;
 public:
     void insert(const std::string& name, AllocaInst* input, std::vector<std::shared_ptr<BaseAST>> &dim);
+    void insertStruct(const string& name, const structInfo& info);
     void remove(const std::vector<std::string>& name);
     AllocaInst* find(const std::string& name);
+    structInfo findStruct(const std::string& name);
     vector<shared_ptr<BaseAST>> array_dim(const std::string& name);
 };
 

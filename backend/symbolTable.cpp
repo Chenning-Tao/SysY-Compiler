@@ -46,3 +46,17 @@ vector<shared_ptr<BaseAST>> symbolTable::array_dim(const std::string &name) {
     if (re == array.end()) return {};
     return re->second.top();
 }
+
+void symbolTable::insertStruct(const string& name, const structInfo& info) {
+    structTable.emplace(name, info);
+}
+
+structInfo symbolTable::findStruct(const string &name) {
+    auto re = structTable.find(name);
+    if (re == structTable.end()) {
+        structInfo info;
+        info.type = nullptr;
+        return info;
+    }
+    return re->second;
+}
