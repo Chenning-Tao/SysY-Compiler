@@ -119,7 +119,9 @@ public:
 // class for variable and array (e.g. a, a[0])
 class Variable : public BaseAST {
 public:
+    // if is an struct: Var_name.Member_name
     string Var_name;
+    string Member_name;
     // if not empty, indicates that this is an array
     vector<shared_ptr<BaseAST>> Length;
 

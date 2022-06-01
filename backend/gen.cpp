@@ -358,15 +358,23 @@ void gen::AssignGen(shared_ptr<Stmt> &StmtUnit) {
     }
     else {
         auto varType = var->getAllocatedType();
-        if (varType != right->getType()){
-            if (varType->isIntegerTy()) right = FloatToInt(right);
-            else if (varType->isFloatTy()) right = IntToFloat(right);
+        if (varType->isStructTy()){
+            structInfo info = NamedValues.findStruct(VarUnit->Var_name);
+            int i = find(info.field.begin(), info.field.end(), VarUnit->Member_name) - info.field.begin();
+            Value* loc = GenBuilder->CreateInBoundsGEP(varType, var, {GenBuilder->getInt32(0), GenBuilder->getInt32(i)});
+            GenBuilder->CreateStore(right, loc);
         }
-        if (VarUnit->Length.empty()) GenBuilder->CreateStore(right, var);
         else {
-            // if is array
-            Value *location = GetLocation(VarUnit, var);
-            GenBuilder->CreateStore(right, location);
+            if (varType != right->getType()) {
+                if (varType->isIntegerTy()) right = FloatToInt(right);
+                else if (varType->isFloatTy()) right = IntToFloat(right);
+            }
+            if (VarUnit->Length.empty()) GenBuilder->CreateStore(right, var);
+            else {
+                // if is array
+                Value *location = GetLocation(VarUnit, var);
+                GenBuilder->CreateStore(right, location);
+            }
         }
     }
 }
@@ -615,12 +623,26 @@ Value *gen::ValueGen(shared_ptr<BaseAST> &input) {
                 return GenBuilder->CreateLoad(global->second->getValueType(), global->second);
         }
         else {
-            if (variable->Length.empty())
-                return GenBuilder->CreateLoad(var->getAllocatedType(), var, var->getName().data());
+            auto varType = var->getAllocatedType();
+            if (varType->isStructTy()){
+                structInfo info = NamedValues.findStruct(variable->Var_name);
+                int i;
+                for(int idx = 0; idx < info.field.size(); ++idx)
+                    if (info.field[idx] == variable->Member_name) {
+                        i = idx;
+                        break;
+                    }
+                Value* loc = GenBuilder->CreateInBoundsGEP(varType, var, {GenBuilder->getInt32(0), GenBuilder->getInt32(i)});
+                return GenBuilder->CreateLoad(var->getAllocatedType()->getStructElementType(i), loc);
+            }
             else {
-                Value *location = GetLocation(variable, var);
-                type re = GetFuncType(var);
-                return GenBuilder->CreateLoad(GetType(re), location, var->getName().data());
+                if (variable->Length.empty())
+                    return GenBuilder->CreateLoad(var->getAllocatedType(), var, var->getName().data());
+                else {
+                    Value *location = GetLocation(variable, var);
+                    type re = GetFuncType(var);
+                    return GenBuilder->CreateLoad(GetType(re), location, var->getName().data());
+                }
             }
         }
     }

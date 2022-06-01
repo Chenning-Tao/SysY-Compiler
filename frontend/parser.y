@@ -537,7 +537,15 @@ LVal
 		ast->Length = move(reinterpret_cast<Variable*>$2->Length);
 		$$ = ast;
 	}
-	;
+	| IDENT '.' IDENT {
+		auto ast = new Variable();
+		ast->AST_type = VARIABLE;
+		ast->Var_name = *shared_ptr<string>($1);
+		ast->Length = vector<shared_ptr<BaseAST>>();
+		ast->Member_name = *shared_ptr<string>($3);
+		$$ = ast;
+	}
+	; 
 
 PrimaryExp
 	: '(' Exp ')' { $$ = $2;}
