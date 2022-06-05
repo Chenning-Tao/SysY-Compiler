@@ -127,3 +127,7 @@ void FuncPrototype::print(int indent) const {
 void ExpList::print(int indent) const {
 
 }
+
+void ErrorAST::print(int indent) const {
+
+}

@@ -514,6 +514,11 @@ Stmt
 		ast->RVal = nullptr;
 		$$ = ast;
 	}
+	| error ';' {
+		auto ast = new ErrorAST();
+		ast->AST_type = ERROR;
+		$$ = ast;
+	}
 	;
 
 Exp : AddExp { $$ = $1; }

@@ -12,7 +12,7 @@ using namespace std;
 
 enum type {Int, Float, Void, Struct};
 enum stmt {If, While, Break, Continue, Return, Assign, Printf, Scanf, Expression};
-enum ast {FUNC, FUNCPROTO, DECL, EXP, FINALEXP, STMT, COMPUNIT, VARIABLE, EXPLIST};
+enum ast {FUNC, FUNCPROTO, DECL, EXP, FINALEXP, STMT, COMPUNIT, VARIABLE, EXPLIST, ERROR};
 
 static void print_indent(int indent) {
     for(int i = 0; i < indent; ++i) cout << "\t";
@@ -40,6 +40,13 @@ public:
     ast AST_type;
     virtual ~BaseAST() = default;
     virtual void print(int indent) const = 0;
+};
+
+class ErrorAST : public BaseAST {
+private:
+public:
+
+    void print(int indent) const override;
 };
 
 // class for function declare
